@@ -23,7 +23,11 @@ import {
   adminDeleteWebinar,
   adminWebinarRegistrations,
 } from '../api/admin-webinars.js';
-import { adminListMarketingContacts } from '../api/admin-crm.js';
+import {
+  adminListMarketingContacts,
+  adminCreateMarketingContact,
+  adminCrmSendEmail,
+} from '../api/admin-crm.js';
 
 /** @param {import('express').Express} app */
 export function registerApiRoutes(app) {
@@ -57,6 +61,8 @@ export function registerApiRoutes(app) {
   app.get('/api/admin/users', (req, res) => listUsers(req, res));
   app.patch('/api/admin/users/:userId', (req, res) => patchUser(req, res));
   app.get('/api/admin/crm/contacts', (req, res) => adminListMarketingContacts(req, res));
+  app.post('/api/admin/crm/contacts', (req, res) => adminCreateMarketingContact(req, res));
+  app.post('/api/admin/crm/send-email', (req, res) => adminCrmSendEmail(req, res));
 
   app.get('/api/webinars/next', (req, res) => getNextWebinar(req, res));
   app.get('/api/webinars', (req, res) => listWebinars(req, res));

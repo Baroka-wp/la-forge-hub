@@ -8,6 +8,8 @@ import {
   adminDeleteLesson,
   adminPatchUser,
   fetchAdminCrmContacts,
+  adminCreateCrmContact,
+  adminCrmSendBulkEmail,
 } from './api.js';
 import { COURSE, PLATFORM_BRAND } from './seed-data.js';
 
@@ -275,6 +277,7 @@ export async function renderAdminCrmHtml(user) {
       const id = esc(c.id);
       return `
       <tr data-contact-id="${id}">
+        <td class="admin-table-cb"><input type="checkbox" class="admin-crm-row-cb" data-contact-id="${id}" aria-label="Sélectionner ${esc(c.email)}" /></td>
         <td><code class="admin-code">${esc(c.email)}</code></td>
         <td>${esc(c.displayName || '—')}</td>
         <td class="muted">${esc(c.phone || '—')}</td>
@@ -287,7 +290,8 @@ export async function renderAdminCrmHtml(user) {
     .join('');
 
   const inner = `
-    <header class="admin-page-head">
+    <div class="admin-crm-page">
+    <header class="admin-page-head admin-crm-page-head">
       <h1 class="h1">Contacts (CRM)</h1>
       <p class="muted body-lg">E-mails issus des inscriptions webinaires et de la formation — utilisés pour les annonces (opt-in) via Brevo.</p>
     </header>
@@ -298,16 +302,29 @@ export async function renderAdminCrmHtml(user) {
     }
     ${
       neon
-        ? `<div class="admin-crm-toolbar surface-container-low">
-      <label class="admin-crm-search-label">Rechercher <input type="search" id="adminCrmSearch" placeholder="E-mail ou nom" class="admin-field" /></label>
-      <p id="adminCrmMsg" class="admin-msg form-error" role="status"></p>
-    </div>`
+        ? `<section class="admin-crm-toolbar surface-container-low" aria-label="Outils liste contacts">
+      <div class="admin-crm-toolbar-row">
+        <label class="admin-crm-search-wrap">Rechercher
+          <input type="search" id="adminCrmSearch" placeholder="E-mail ou nom" class="admin-field" autocomplete="off" />
+        </label>
+        <div class="admin-crm-toolbar-end">
+          <span id="adminCrmSelectionHint" class="admin-crm-selection-hint muted small" aria-live="polite">Aucune sélection</span>
+          <div class="admin-crm-toolbar-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="adminCrmSendSelected">Envoyer à la sélection</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="adminCrmSendAll" title="Tous les contacts correspondant à la recherche et au filtre opt-in">Envoyer à tous</button>
+          </div>
+        </div>
+      </div>
+      <p id="adminCrmPager" class="admin-crm-toolbar-pager muted small" role="status"></p>
+      <p id="adminCrmMsg" class="admin-msg form-error admin-crm-toolbar-msg" role="status"></p>
+    </section>`
         : ''
     }
-    <div class="admin-table-wrap" id="adminCrmTableWrap">
-      <table class="admin-table">
+    <div class="admin-table-wrap admin-crm-table-wrap" id="adminCrmTableWrap">
+      <table class="admin-table admin-table--crm">
         <thead>
           <tr>
+            <th scope="col" class="admin-table-cb"><input type="checkbox" id="adminCrmSelectPage" title="Tout sélectionner sur cette page" aria-label="Tout sélectionner sur cette page" /></th>
             <th>E-mail</th>
             <th>Nom</th>
             <th>Tél.</th>
@@ -317,9 +334,38 @@ export async function renderAdminCrmHtml(user) {
             <th>Mis à jour</th>
           </tr>
         </thead>
-        <tbody id="adminCrmTbody">${rows || `<tr><td colspan="7" class="muted">Aucun contact.</td></tr>`}</tbody>
+        <tbody id="adminCrmTbody">${rows || `<tr><td colspan="8" class="muted">Aucun contact.</td></tr>`}</tbody>
       </table>
-      <p class="muted small admin-crm-pager" id="adminCrmPager"></p>
+    </div>
+    ${
+      neon
+        ? `<div class="admin-crm-panels">
+    <section class="admin-crm-add surface-container-low">
+      <h2 class="h3">Ajouter un contact</h2>
+      <form id="adminCrmAddForm" class="admin-form-grid admin-form-grid--crm-add">
+        <label>E-mail <input type="email" name="email" required autocomplete="email" placeholder="contact@exemple.com" class="admin-field" /></label>
+        <label>Nom <input type="text" name="displayName" autocomplete="name" placeholder="Prénom Nom" class="admin-field" /></label>
+        <label>Téléphone <input type="tel" name="phone" autocomplete="tel" placeholder="+229 …" class="admin-field" /></label>
+        <label class="admin-form-span3 admin-crm-opt-in-label"><input type="checkbox" name="marketingOptIn" /> Accepte les e-mails d’annonces La Forge Hub</label>
+        <div class="admin-form-actions admin-form-span3"><button type="submit" class="btn btn-primary">Enregistrer dans le CRM</button></div>
+      </form>
+      <p id="adminCrmAddMsg" class="admin-msg" role="status"></p>
+    </section>
+    <section class="admin-crm-compose surface-container-low">
+      <h2 class="h3">E-mail groupé (HTML)</h2>
+      <p class="muted small">Corps en HTML simple (<code>&lt;p&gt;</code>, <code>&lt;strong&gt;</code>, <code>&lt;a href&gt;</code>, <code>&lt;br&gt;</code>). Les envois se lancent depuis la barre d’outils ci-dessus.</p>
+      <div class="admin-crm-mail-fields">
+        <label class="admin-crm-mail-subj">Objet <input type="text" id="adminCrmMailSubject" class="admin-field" placeholder="Objet du message" /></label>
+        <label class="admin-crm-mail-body">Message HTML
+          <textarea id="adminCrmMailBody" class="admin-field admin-crm-body" rows="14" placeholder="&lt;p&gt;Bonjour,&lt;/p&gt;&#10;&lt;p&gt;…&lt;/p&gt;"></textarea>
+        </label>
+        <label class="admin-crm-only-opt"><input type="checkbox" id="adminCrmOnlyOptIn" checked /> Cible&nbsp;: uniquement les contacts avec « annonces&nbsp;: oui »</label>
+      </div>
+      <p id="adminCrmSendMsg" class="admin-msg" role="status"></p>
+    </section>
+    </div>`
+        : ''
+    }
     </div>`;
 
   return wrapAdminPage('crm', inner, user);
@@ -331,11 +377,32 @@ export function bindAdminCrmPage() {
   const pager = document.getElementById('adminCrmPager');
   const search = document.getElementById('adminCrmSearch');
   const msg = document.getElementById('adminCrmMsg');
+  const selectPage = document.getElementById('adminCrmSelectPage');
+  const selectionHint = document.getElementById('adminCrmSelectionHint');
+  const addForm = document.getElementById('adminCrmAddForm');
+  const addMsg = document.getElementById('adminCrmAddMsg');
+  const sendMsg = document.getElementById('adminCrmSendMsg');
+  const btnSendSel = document.getElementById('adminCrmSendSelected');
+  const btnSendAll = document.getElementById('adminCrmSendAll');
   let page = 1;
   let q = '';
 
   function escCell(s) {
     return esc(String(s ?? ''));
+  }
+
+  function selectedIds() {
+    return Array.from(document.querySelectorAll('.admin-crm-row-cb:checked'))
+      .map((el) => el.getAttribute('data-contact-id'))
+      .filter(Boolean);
+  }
+
+  function updateSelectionHint() {
+    if (!selectionHint) return;
+    const n = document.querySelectorAll('.admin-crm-row-cb:checked').length;
+    if (n === 0) selectionHint.textContent = 'Aucune sélection';
+    else if (n === 1) selectionHint.textContent = '1 contact sélectionné';
+    else selectionHint.textContent = `${n} contacts sélectionnés`;
   }
 
   async function load() {
@@ -348,11 +415,13 @@ export function bindAdminCrmPage() {
     if (msg) msg.textContent = '';
     tbody.innerHTML = (r.contacts || [])
       .map((c) => {
+        const id = escCell(c.id);
         const ann = c.marketingOptIn
           ? '<span class="admin-badge admin-badge--ok">Oui</span>'
           : '<span class="muted">Non</span>';
         const form = c.hasFormationEnrollment ? 'Oui' : '<span class="muted">Non</span>';
-        return `<tr>
+        return `<tr data-contact-id="${id}">
+        <td class="admin-table-cb"><input type="checkbox" class="admin-crm-row-cb" data-contact-id="${id}" aria-label="Sélectionner ${escCell(c.email)}" /></td>
         <td><code class="admin-code">${escCell(c.email)}</code></td>
         <td>${escCell(c.displayName || '—')}</td>
         <td class="muted">${escCell(c.phone || '—')}</td>
@@ -364,12 +433,106 @@ export function bindAdminCrmPage() {
       })
       .join('');
     if (!r.contacts || r.contacts.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="muted">Aucun contact.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">Aucun contact.</td></tr>';
     }
+    if (selectPage) selectPage.checked = false;
+    updateSelectionHint();
     if (pager) {
       pager.innerHTML = `Page ${r.page} / ${r.totalPages} · ${r.total} contact(s)`;
     }
   }
+
+  selectPage?.addEventListener('change', () => {
+    const on = selectPage.checked;
+    document.querySelectorAll('.admin-crm-row-cb').forEach((cb) => {
+      cb.checked = on;
+    });
+    updateSelectionHint();
+  });
+
+  tbody?.addEventListener('change', (e) => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || !t.classList.contains('admin-crm-row-cb')) return;
+    if (!selectPage) return;
+    const boxes = document.querySelectorAll('.admin-crm-row-cb');
+    if (!boxes.length) {
+      selectPage.checked = false;
+      updateSelectionHint();
+      return;
+    }
+    selectPage.checked = Array.from(boxes).every((x) => x.checked);
+    updateSelectionHint();
+  });
+
+  addForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (addMsg) addMsg.textContent = '';
+    const fd = new FormData(addForm);
+    const email = String(fd.get('email') || '').trim();
+    const displayName = String(fd.get('displayName') || '').trim() || undefined;
+    const phone = String(fd.get('phone') || '').trim() || undefined;
+    const marketingOptIn = fd.get('marketingOptIn') === 'on';
+    const r = await adminCreateCrmContact({ email, displayName, phone, marketingOptIn });
+    if (!r.ok) {
+      if (addMsg) addMsg.textContent = r.error || 'Erreur';
+      return;
+    }
+    addForm.reset();
+    if (addMsg) addMsg.textContent = 'Contact enregistré.';
+    await load();
+  });
+
+  async function sendBulk(mode) {
+    if (sendMsg) sendMsg.textContent = '';
+    const subject = String(document.getElementById('adminCrmMailSubject')?.value || '').trim();
+    const htmlContent = String(document.getElementById('adminCrmMailBody')?.value || '').trim();
+    const onlyOptIn = document.getElementById('adminCrmOnlyOptIn') instanceof HTMLInputElement
+      ? document.getElementById('adminCrmOnlyOptIn').checked
+      : true;
+    if (!subject) {
+      if (sendMsg) sendMsg.textContent = 'Indiquez un objet.';
+      return;
+    }
+    if (!htmlContent) {
+      if (sendMsg) sendMsg.textContent = 'Indiquez un message HTML.';
+      return;
+    }
+    const ids = mode === 'selection' ? selectedIds() : [];
+    if (mode === 'selection' && ids.length === 0) {
+      if (sendMsg) sendMsg.textContent = 'Cochez au moins un contact.';
+      return;
+    }
+    if (
+      mode === 'all' &&
+      !window.confirm(
+        'Envoyer cet e-mail à tous les contacts correspondant à la recherche et au filtre d’opt-in ?',
+      )
+    ) {
+      return;
+    }
+    const searchEl = document.getElementById('adminCrmSearch');
+    const searchQuery =
+      mode === 'all' && searchEl && 'value' in searchEl ? String(searchEl.value || '').trim() : '';
+
+    const r = await adminCrmSendBulkEmail({
+      subject,
+      htmlContent: `<div style="font-family:system-ui,sans-serif;line-height:1.5;max-width:560px">${htmlContent}</div>`,
+      mode: mode === 'selection' ? 'selection' : 'all',
+      contactIds: mode === 'selection' ? ids : [],
+      onlyOptIn,
+      searchQuery,
+    });
+    if (!r.ok) {
+      if (sendMsg) sendMsg.textContent = r.error || 'Erreur';
+      return;
+    }
+    if (sendMsg) {
+      sendMsg.textContent = `Envoyé : ${r.sent} / ${r.total}${r.skipped ? ` (ignorés config Brevo : ${r.skipped})` : ''}${r.failed ? ` — échecs : ${r.failed}` : ''}`;
+    }
+  }
+
+  btnSendSel?.addEventListener('click', () => sendBulk('selection'));
+  btnSendAll?.addEventListener('click', () => sendBulk('all'));
 
   let searchTimer;
   search?.addEventListener('input', () => {

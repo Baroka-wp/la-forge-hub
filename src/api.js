@@ -448,9 +448,15 @@ export async function fetchWebinars(kind) {
   return { ok: true, webinars: data.webinars || [] };
 }
 
-export async function fetchWebinarById(id) {
+/**
+ * @param {string} id
+ * @param {{ guestEmail?: string }} [opts] — e-mail invité enregistré (session) pour afficher le lien de connexion
+ */
+export async function fetchWebinarById(id, opts = {}) {
   if (!neonMode()) return { ok: false, error: 'Mode local', webinar: null };
-  const r = await apiFetch(`/api/webinars/${encodeURIComponent(id)}`, { method: 'GET' });
+  const ge = String(opts.guestEmail || '').trim();
+  const qs = ge ? `?regEmail=${encodeURIComponent(ge)}` : '';
+  const r = await apiFetch(`/api/webinars/${encodeURIComponent(id)}${qs}`, { method: 'GET' });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return { ok: false, error: data.error || r.statusText, webinar: null };
   return { ok: true, webinar: data.webinar };
@@ -637,6 +643,40 @@ export async function fetchAdminCrmContacts(params = {}) {
     page: data.page ?? 1,
     pageSize: data.pageSize ?? 25,
     totalPages: data.totalPages ?? 1,
+  };
+}
+
+/**
+ * @param {{ email: string, displayName?: string, phone?: string, marketingOptIn?: boolean }} body
+ */
+export async function adminCreateCrmContact(body) {
+  if (!neonMode()) return { ok: false, error: 'Mode local' };
+  const r = await apiFetch('/api/admin/crm/contacts', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText, contact: null };
+  return { ok: true, contact: data.contact };
+}
+
+/**
+ * @param {{ subject: string, htmlContent: string, mode: 'all' | 'selection', contactIds?: string[], onlyOptIn?: boolean, searchQuery?: string }} body
+ */
+export async function adminCrmSendBulkEmail(body) {
+  if (!neonMode()) return { ok: false, error: 'Mode local' };
+  const r = await apiFetch('/api/admin/crm/send-email', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText, sent: 0, total: 0 };
+  return {
+    ok: true,
+    sent: data.sent ?? 0,
+    failed: data.failed ?? 0,
+    skipped: data.skipped ?? 0,
+    total: data.total ?? 0,
   };
 }
 

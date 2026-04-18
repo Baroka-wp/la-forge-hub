@@ -747,6 +747,78 @@ body:has(.home-landing) .site-footer {
   font-weight: 700;
 }
 
+.site-footer-links {
+  margin-top: 0.65rem;
+}
+
+.site-footer-links a {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* —— Page CGU —— */
+.legal-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px clamp(16px, 4vw, 32px) 48px;
+}
+
+.legal-page-back {
+  margin-bottom: 0.5rem;
+}
+
+.legal-page-back a {
+  color: var(--on-surface-variant);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.legal-page-back a:hover {
+  color: var(--primary);
+}
+
+.legal-page-head .h1 {
+  margin-bottom: 0.35rem;
+}
+
+.legal-page-meta {
+  margin-bottom: 1.5rem;
+}
+
+.legal-page-body p {
+  margin-bottom: 1rem;
+}
+
+.legal-h2 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.legal-disclaimer {
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.5rem;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--primary);
+}
+
+.inline-legal-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inline-legal-link:hover {
+  opacity: 0.9;
+}
+
 /* —— Boutons —— */
 .btn {
   display: inline-flex;
@@ -805,6 +877,22 @@ body:has(.home-landing) .site-footer {
 .btn-sm {
   padding: 8px 14px;
   font-size: 13px;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: none;
+  pointer-events: none;
+}
+
+.btn-primary:disabled:hover,
+.btn-secondary:disabled:hover {
+  opacity: 0.45;
+  transform: none;
 }
 
 /* —— Home —— */
@@ -2674,6 +2762,63 @@ body:has(.home-landing) .site-footer {
   margin: 0.75rem 0 0;
 }
 
+.webinar-side-teaser {
+  margin-bottom: 0.75rem;
+  max-width: 42rem;
+}
+
+.webinar-registered-pack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.webinar-toolkit-kicker {
+  margin-bottom: 0.35rem;
+}
+
+.webinar-toolkit-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--on-surface-variant);
+}
+
+.webinar-toolkit-copyrow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: stretch;
+}
+
+.webinar-toolkit-input {
+  flex: 1;
+  min-width: 12rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-variant);
+  font-size: 0.85rem;
+  background: var(--surface-container-lowest);
+}
+
+.webinar-toolkit-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.webinar-toolkit--row-block {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.webinar-join-pending {
+  margin: 0;
+  max-width: 40rem;
+}
+
 .webinar-detail-banner {
   /* Pas de marge haut négative : sinon le bandeau recouvre le lien « Tous les webinaires » */
   margin: 0 -1rem 1rem;
@@ -2836,18 +2981,170 @@ body:has(.home-landing) .site-footer {
   gap: 0.65rem;
 }
 
-.admin-crm-toolbar {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-lg);
-  margin-bottom: 1rem;
+.webinar-dash-register-inline--stack {
+  flex-direction: column;
+  align-items: stretch;
+  max-width: 16rem;
 }
 
-.admin-crm-search-label {
+.webinar-dash-register-inline--stack .btn {
+  align-self: flex-start;
+}
+
+.admin-crm-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.admin-crm-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.admin-crm-toolbar {
+  padding: 0.85rem 1.1rem 1rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 1rem;
+  border: 1px solid var(--outline-variant);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface-container-low);
+  box-shadow: 0 1px 0 var(--outline-variant);
+}
+
+.admin-crm-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+
+.admin-crm-search-wrap {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 28rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  font-size: 0.9rem;
-  max-width: 22rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
+.admin-crm-search-wrap .admin-field {
+  width: 100%;
+}
+
+.admin-crm-toolbar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  margin-left: auto;
+}
+
+.admin-crm-selection-hint {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-crm-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.admin-crm-toolbar-pager {
+  margin: 0.55rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.admin-crm-toolbar-msg {
+  margin: 0.35rem 0 0;
+}
+
+.admin-crm-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 0;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .admin-crm-panels {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-crm-toolbar {
+    position: relative;
+    top: auto;
+  }
+
+  .admin-crm-toolbar-end {
+    width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .admin-crm-toolbar-actions {
+    width: 100%;
+  }
+
+  .admin-crm-toolbar-actions .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.admin-table-cb {
+  width: 2.25rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.admin-form-grid--crm-add {
+  max-width: 720px;
+}
+
+.admin-crm-opt-in-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-crm-add,
+.admin-crm-compose {
+  padding: 1rem 1.15rem 1.15rem;
+  border-radius: var(--radius-lg);
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.admin-crm-table-wrap {
+  margin-top: 0;
+}
+
+.admin-crm-mail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-width: none;
+}
+
+.admin-crm-body {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  min-height: 220px;
+}
+
+.admin-crm-only-opt {
+  margin-top: 0.35rem;
 }
 
 .admin-badge.admin-badge--ok {

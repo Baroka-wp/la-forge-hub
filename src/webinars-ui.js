@@ -22,7 +22,7 @@ function guestWebinarStorageKey(webinarId) {
   return `${GUEST_WEBINAR_REG_PREFIX}${webinarId}`;
 }
 
-function readGuestWebinarRegisteredEmail(webinarId) {
+export function readGuestWebinarRegisteredEmail(webinarId) {
   try {
     const raw = sessionStorage.getItem(guestWebinarStorageKey(webinarId));
     if (!raw) return null;
@@ -122,6 +122,151 @@ function isUpcoming(w) {
   return new Date(w.startsAt) > new Date() && !hasPublicReplay(w);
 }
 
+function webinarPageAbsoluteUrl(w) {
+  const base =
+    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  return `${base}/webinars/${encodeURIComponent(w.id)}`;
+}
+
+function formatIcsUtc(d) {
+  return d
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d{3}Z$/, 'Z');
+}
+
+function icsEscape(s) {
+  return String(s)
+    .replace(/\\/g, '\\\\')
+    .replace(/\n/g, '\\n')
+    .replace(/,/g, '\\,')
+    .replace(/;/g, '\\;');
+}
+
+function webinarIcsMetaB64(w, pageUrl) {
+  try {
+    const payload = JSON.stringify({
+      id: w.id,
+      title: w.title,
+      description: String(w.description || '').slice(0, 2500),
+      startsAt: w.startsAt,
+      locationType: w.locationType,
+      venue: w.venue || '',
+      onlineLink: w.onlineLink || '',
+      pageUrl,
+    });
+    return btoa(unescape(encodeURIComponent(payload)));
+  } catch {
+    return '';
+  }
+}
+
+function buildWebinarIcsPayloadFromMeta(o) {
+  if (!o || !o.startsAt) return '';
+  const w = o;
+  const pageUrl = o.pageUrl || '';
+  const start = new Date(w.startsAt);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const loc =
+    w.locationType === 'ONLINE'
+      ? pageUrl
+      : [w.venue, w.onlineLink].filter(Boolean).join(' · ') || pageUrl;
+  const desc = `${String(w.description || '').slice(0, 1800)}\n\nPage : ${pageUrl}`;
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//La Forge Hub//Webinar//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${w.id}@forge-hub`,
+    `DTSTAMP:${formatIcsUtc(new Date())}`,
+    `DTSTART:${formatIcsUtc(start)}`,
+    `DTEND:${formatIcsUtc(end)}`,
+    `SUMMARY:${icsEscape(w.title)}`,
+    `DESCRIPTION:${icsEscape(desc)}`,
+    `LOCATION:${icsEscape(loc)}`,
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+function googleCalendarUrl(w, pageUrl) {
+  if (!w.startsAt) return '#';
+  const start = new Date(w.startsAt);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  const details = `${String(w.description || '').slice(0, 1500)}\n\n${pageUrl}`;
+  const location =
+    w.locationType === 'ONLINE'
+      ? pageUrl
+      : [w.venue, w.onlineLink].filter(Boolean).join(' · ') || pageUrl;
+  const p = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: w.title,
+    dates: `${formatIcsUtc(start)}/${formatIcsUtc(end)}`,
+    details,
+    location,
+  });
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
+}
+
+function webinarRegisteredPackHtml(w, pageUrl) {
+  const gcal = googleCalendarUrl(w, pageUrl);
+  const hasJoin = w.locationType === 'ONLINE';
+  const joinSection = hasJoin
+    ? w.onlineLink
+      ? `
+      <div class="webinar-toolkit webinar-toolkit--block" data-webinar-toolkit="1">
+        <p class="eyebrow webinar-toolkit-kicker">Connexion en ligne</p>
+        <label class="webinar-toolkit-label" for="webinarJoinUrlField">Lien de la session (copier pour rejoindre)</label>
+        <div class="webinar-toolkit-copyrow">
+          <input type="text" readonly class="webinar-toolkit-input" id="webinarJoinUrlField" value="${esc(
+        w.onlineLink,
+      )}" />
+          <button type="button" class="btn btn-secondary btn-sm" id="btnWebinarCopyJoin">Copier</button>
+        </div>
+      </div>`
+      : `<p class="muted small webinar-join-pending">Le lien de visioconférence sera communiqué par e-mail ou affiché ici dès qu’il sera disponible.</p>`
+    : `
+      <div class="webinar-toolkit webinar-toolkit--block">
+        <p class="eyebrow webinar-toolkit-kicker">Lieu</p>
+        <p class="body-sm">${esc(w.venue || 'L’adresse précise vous sera communiquée par e-mail.')}</p>
+      </div>`;
+
+  const metaB64 = webinarIcsMetaB64(w, pageUrl);
+  const metaAttr = metaB64 ? ` data-ics-meta="${String(metaB64).replace(/"/g, '&quot;')}"` : '';
+  return `
+    <div class="webinar-registered-pack"${metaAttr}>
+      <p class="webinar-registered-badge">Vous êtes inscrit·e à cette session.</p>
+      ${joinSection}
+      <div class="webinar-toolkit webinar-toolkit--row-block">
+        <p class="eyebrow webinar-toolkit-kicker">Calendrier</p>
+        <div class="webinar-toolkit-row">
+          <a class="btn btn-secondary btn-sm" href="${esc(gcal)}" target="_blank" rel="noopener noreferrer">Google&nbsp;Agenda</a>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnWebinarDownloadIcs">Fichier&nbsp;.ics</button>
+        </div>
+      </div>
+      <div class="webinar-toolkit webinar-toolkit--row-block">
+        <p class="eyebrow webinar-toolkit-kicker">Partager le webinaire</p>
+        <div class="webinar-toolkit-row">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnWebinarSharePage">Partager ou copier le lien</button>
+        </div>
+        <input type="hidden" id="webinarShareUrlValue" value="${esc(pageUrl)}" />
+      </div>
+    </div>`;
+}
+
+function parseIcsMetaFromPack(packEl) {
+  const b64 = packEl?.getAttribute('data-ics-meta');
+  if (!b64) return null;
+  try {
+    const j = decodeURIComponent(escape(atob(b64)));
+    return JSON.parse(j);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Encart « prochain webinaire » pour le tableau de bord apprenant.
  */
@@ -132,12 +277,12 @@ export async function getDashboardWebinarBannerHtml() {
   const w = r.webinar;
   const when = w.startsAt
     ? new Date(w.startsAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : '';
   const registered = !!w.registered;
   const banner = w.bannerUrl
@@ -153,17 +298,20 @@ export async function getDashboardWebinarBannerHtml() {
         <p class="body-sm">${esc(w.description).slice(0, 220)}${w.description.length > 220 ? '…' : ''}</p>
         <div class="webinar-dash-actions webinar-dash-actions--register">
           <a data-router class="btn btn-primary" href="/webinars/${esc(w.id)}">Détails & inscription</a>
-          ${
-            registered
-              ? '<span class="webinar-registered-badge">Inscrit·e</span>'
-              : `<div class="webinar-dash-register-inline">
+          ${registered
+      ? '<span class="webinar-registered-badge">Inscrit·e</span>'
+      : `<div class="webinar-dash-register-inline webinar-dash-register-inline--stack">
+              <label class="webinar-marketing-opt webinar-marketing-opt--compact webinar-terms-opt">
+                <input type="checkbox" id="acceptTermsDashWebinar" />
+                <span>J’accepte les <a data-router href="/cgu" class="inline-legal-link">CGU</a></span>
+              </label>
               <label class="webinar-marketing-opt webinar-marketing-opt--compact">
                 <input type="checkbox" id="dashWebinarMarketingOptIn" />
                 <span>E-mails La Forge Hub</span>
               </label>
-              <button type="button" class="btn btn-secondary" id="btnDashWebinarRegister" data-webinar-id="${esc(w.id)}">Je m’inscris</button>
+              <button type="button" class="btn btn-secondary" id="btnDashWebinarRegister" data-webinar-id="${esc(w.id)}" disabled aria-disabled="true">Je m’inscris</button>
             </div>`
-          }
+    }
         </div>
       </div>
     </div>`;
@@ -174,7 +322,16 @@ export function bindDashboardWebinarBanner() {
   if (!btn) return;
   const id = btn.getAttribute('data-webinar-id');
   if (!id) return;
+  const termsCb = document.getElementById('acceptTermsDashWebinar');
+  function syncDashBtn() {
+    const ok = termsCb instanceof HTMLInputElement && termsCb.checked;
+    btn.disabled = !ok;
+    btn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+  }
+  termsCb?.addEventListener('change', syncDashBtn);
+  syncDashBtn();
   btn.addEventListener('click', async () => {
+    if (termsCb instanceof HTMLInputElement && !termsCb.checked) return;
     const opt = document.getElementById('dashWebinarMarketingOptIn');
     const marketingOptIn = opt instanceof HTMLInputElement && opt.checked;
     const r = await registerForWebinar(id, { marketingOptIn });
@@ -218,12 +375,12 @@ export async function renderWebinarsPageHtml() {
       ? 'Replay'
       : w.kind === 'EVENT' && w.startsAt
         ? new Date(w.startsAt).toLocaleString('fr-FR', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : '';
     const thumb = w.bannerUrl
       ? `<div class="webinar-card-thumb"><img src="${esc(w.bannerUrl)}" alt="" loading="lazy" /></div>`
@@ -245,12 +402,12 @@ export async function renderWebinarsPageHtml() {
   const hero = upcoming[0];
   const heroWhen = hero?.startsAt
     ? new Date(hero.startsAt).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : '';
   const heroMedia = hero?.bannerUrl
     ? `<img src="${esc(hero.bannerUrl)}" alt="" loading="lazy" />`
@@ -265,9 +422,8 @@ export async function renderWebinarsPageHtml() {
           <p class="muted body-lg">Sessions a venir et replays de formation, presentes dans un format editorial clair.</p>
         </header>
 
-        ${
-          hero
-            ? `<article class="webinar-hero surface-container-low">
+        ${hero
+      ? `<article class="webinar-hero surface-container-low">
               <a data-router href="/webinars/${esc(hero.id)}" class="webinar-hero-media">${heroMedia}</a>
               <div class="webinar-hero-body">
                 <p class="webinar-hero-kicker">A venir</p>
@@ -279,8 +435,8 @@ export async function renderWebinarsPageHtml() {
                 </div>
               </div>
             </article>`
-            : ''
-        }
+      : ''
+    }
 
         <h2 class="h2 section-title">A venir</h2>
         <div class="webinar-grid">
@@ -298,10 +454,10 @@ export async function renderWebinarsPageHtml() {
 function replayRailItemHtml(x) {
   const when = x.startsAt
     ? new Date(x.startsAt).toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      })
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
     : '';
   const thumb = x.bannerUrl
     ? `<div class="webinar-replays-rail-thumb"><img src="${esc(x.bannerUrl)}" alt="" loading="lazy" /></div>`
@@ -316,7 +472,11 @@ function replayRailItemHtml(x) {
     </a>`;
 }
 
-export async function renderWebinarDetailHtml(id) {
+/**
+ * @param {string} id
+ * @param {{ r?: import('./api.js').fetchWebinarById extends (...args: infer A) => infer R ? Awaited<R> : never; allList?: Awaited<ReturnType<typeof fetchWebinars>> } | null} [preloaded] — évite un double fetch quand les données viennent déjà du routeur.
+ */
+export async function renderWebinarDetailHtml(id, preloaded = null) {
   const neon = backendMode() === 'neon';
   if (!neon) {
     return `
@@ -326,7 +486,20 @@ export async function renderWebinarDetailHtml(id) {
       </section>`;
   }
 
-  const [r, allList] = await Promise.all([fetchWebinarById(id), fetchWebinars()]);
+  let r;
+  let allList;
+  if (preloaded && preloaded.r !== undefined && preloaded.allList !== undefined) {
+    r = preloaded.r;
+    allList = preloaded.allList;
+  } else {
+    const guestEmailForApi = readGuestWebinarRegisteredEmail(id) || '';
+    const results = await Promise.all([
+      fetchWebinarById(id, { guestEmail: guestEmailForApi }),
+      fetchWebinars(),
+    ]);
+    r = results[0];
+    allList = results[1];
+  }
   if (!r.ok || !r.webinar) {
     return `
       <section class="panel surface-card">
@@ -346,8 +519,8 @@ export async function renderWebinarDetailHtml(id) {
     return tb - ta;
   });
   const { user } = await getSession();
-  const guestStored = readGuestWebinarRegisteredEmail(id);
-  const registered = !!(w.registered) || !!guestStored;
+  /** Statut d’inscription : API (JWT + regEmail invité). */
+  const registered = !!w.registered;
   const isPastEvent = w.kind === 'EVENT' && w.startsAt && new Date(w.startsAt) <= new Date();
   const canRegister = isUpcoming(w) && w.startsAt && new Date(w.startsAt) > new Date();
 
@@ -392,51 +565,61 @@ export async function renderWebinarDetailHtml(id) {
       minute: '2-digit',
     });
 
+  const pageUrl = webinarPageAbsoluteUrl(w);
+
   const regUi =
     canRegister && !registered
       ? user
         ? `<div class="webinar-register-stack">
+            <label class="webinar-marketing-opt webinar-terms-opt">
+              <input type="checkbox" id="acceptTermsWebinar" />
+              <span>J’ai lu et j’accepte les <a data-router href="/cgu" class="inline-legal-link">conditions générales d’utilisation</a> de La Forge Hub.</span>
+            </label>
             <label class="webinar-marketing-opt">
               <input type="checkbox" id="webinarMarketingOptIn" />
               <span>J’accepte de recevoir des e-mails pour les annonces des prochaines activités de La Forge Hub.</span>
             </label>
-            <button type="button" class="btn btn-primary" id="btnWebinarRegister" data-webinar-id="${esc(w.id)}">M’inscrire à ce webinaire</button>
+            <button type="button" class="btn btn-primary" id="btnWebinarRegister" data-webinar-id="${esc(w.id)}" disabled aria-disabled="true">M’inscrire à ce webinaire</button>
           </div>`
         : `<form id="formWebinarGuestRegister" class="webinar-guest-register" data-webinar-id="${esc(w.id)}">
             <label class="webinar-guest-register-label"><span class="admin-label-text">E-mail</span><input type="email" name="email" required autocomplete="email" placeholder="vous@exemple.com" /></label>
             <label class="webinar-guest-register-label"><span class="admin-label-text">Nom complet</span><input type="text" name="fullName" required autocomplete="name" placeholder="Prénom et nom" /></label>
             <label class="webinar-guest-register-label"><span class="admin-label-text">WhatsApp</span><input type="tel" name="phone" inputmode="tel" required autocomplete="tel" placeholder="+33 6 12 34 56 78" /></label>
+            <label class="webinar-marketing-opt webinar-marketing-opt--guest webinar-terms-opt">
+              <input type="checkbox" name="acceptTerms" id="acceptTermsWebinarGuest" />
+              <span>J’ai lu et j’accepte les <a data-router href="/cgu" class="inline-legal-link">conditions générales d’utilisation</a> de La Forge Hub.</span>
+            </label>
             <label class="webinar-marketing-opt webinar-marketing-opt--guest">
               <input type="checkbox" name="marketingOptIn" id="webinarGuestMarketingOptIn" />
               <span>J’accepte de recevoir des e-mails pour les annonces des prochaines activités de La Forge Hub.</span>
             </label>
-            <button type="submit" class="btn btn-primary">M’inscrire à ce webinaire</button>
+            <button type="submit" class="btn btn-primary" id="btnWebinarGuestSubmit" disabled aria-disabled="true">M’inscrire à ce webinaire</button>
             <p id="webinarGuestRegisterMsg" class="form-error admin-msg" role="status"></p>
           </form>`
-      : canRegister && registered
-        ? '<p class="webinar-registered-badge">Vous êtes inscrit·e à cette session.</p>'
-        : w.kind === 'EVENT' && isPastEvent && !hasPublicReplay(w)
-          ? '<p class="muted">Ce webinaire est terminé. Ajoutez le lien du replay depuis l’administration lorsqu’il est disponible.</p>'
-          : '';
-
-  const linkBlock =
-    w.kind === 'EVENT' && w.locationType === 'ONLINE' && canRegister
-      ? registered && w.onlineLink
-        ? `<p class="muted small">Lien de connexion : <a href="${esc(w.onlineLink)}" target="_blank" rel="noopener">${esc(w.onlineLink)}</a></p>`
-        : `<p class="muted small">Le lien de connexion s’affiche après inscription.</p>`
       : '';
 
-  const hasSide = Boolean(linkBlock) || Boolean(regUi);
+  const teaserOnline =
+    canRegister && !registered && w.kind === 'EVENT' && w.locationType === 'ONLINE'
+      ? `<p class="muted small webinar-side-teaser">Après inscription, ce bloc affiche le <strong>lien de connexion</strong> (copie), l’ajout au <strong>calendrier</strong> et le <strong>partage</strong></p>`
+      : '';
+
+  const registeredPackHtml = canRegister && registered ? webinarRegisteredPackHtml(w, pageUrl) : '';
+
+  const pastReplayMsg =
+    w.kind === 'EVENT' && isPastEvent && !hasPublicReplay(w)
+      ? '<p class="muted">Ce webinaire est terminé. Ajoutez le lien du replay depuis l’administration lorsqu’il est disponible.</p>'
+      : '';
+
+  const hasSide = Boolean(teaserOnline || regUi || registeredPackHtml || pastReplayMsg);
 
   const replaysRail = `
     <aside class="webinar-detail-replays-rail surface-container-low" aria-label="Autres replays">
       <h2 class="webinar-replays-rail-heading">Autres replays</h2>
       <div class="webinar-replays-rail-list">
-        ${
-          otherReplays.length
-            ? otherReplays.map(replayRailItemHtml).join('')
-            : '<p class="muted small webinar-replays-rail-empty">Aucun autre replay pour l’instant.</p>'
-        }
+        ${otherReplays.length
+      ? otherReplays.map(replayRailItemHtml).join('')
+      : '<p class="muted small webinar-replays-rail-empty">Aucun autre replay pour l’instant.</p>'
+    }
       </div>
       <p class="webinar-replays-rail-all muted small">
         <a data-router href="/webinars">Voir tous les webinaires →</a>
@@ -455,14 +638,15 @@ export async function renderWebinarDetailHtml(id) {
             <p class="webinar-detail-tag">${esc(w.tag)}</p>
             ${when ? `<p class="muted webinar-detail-when">${esc(when)} · ${locLabel(w.locationType, w.venue)}</p>` : `<p class="muted">${locLabel(w.locationType, w.venue)}</p>`}
           </header>
-          ${
-            hasSide
-              ? `<div class="webinar-detail-inline-side">
-            ${linkBlock}
-            <div class="webinar-detail-actions">${regUi}</div>
+          ${hasSide
+      ? `<div class="webinar-detail-inline-side">
+            ${teaserOnline}
+            ${regUi ? `<div class="webinar-detail-actions">${regUi}</div>` : ''}
+            ${registeredPackHtml}
+            ${pastReplayMsg}
           </div>`
-              : ''
-          }
+      : ''
+    }
           <div class="webinar-detail-main">
             <div class="webinar-detail-desc body-lg"><p>${esc(w.description).replace(/\n/g, '<br/>')}</p></div>
           </div>
@@ -474,10 +658,21 @@ export async function renderWebinarDetailHtml(id) {
 
 export function bindWebinarDetailPage() {
   const btn = document.getElementById('btnWebinarRegister');
+  const termsLogged = document.getElementById('acceptTermsWebinar');
+  if (btn && termsLogged) {
+    function syncWebinarLoggedBtn() {
+      const ok = termsLogged instanceof HTMLInputElement && termsLogged.checked;
+      btn.disabled = !ok;
+      btn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    }
+    termsLogged.addEventListener('change', syncWebinarLoggedBtn);
+    syncWebinarLoggedBtn();
+  }
   if (btn) {
     const wid = btn.getAttribute('data-webinar-id');
     if (wid) {
       btn.addEventListener('click', async () => {
+        if (termsLogged instanceof HTMLInputElement && !termsLogged.checked) return;
         const opt = document.getElementById('webinarMarketingOptIn');
         const marketingOptIn = opt instanceof HTMLInputElement && opt.checked;
         const r = await registerForWebinar(wid, { marketingOptIn });
@@ -485,10 +680,7 @@ export function bindWebinarDetailPage() {
           alert(r.error || 'Erreur');
           return;
         }
-        const wrap = btn.parentElement;
-        if (wrap) {
-          wrap.innerHTML = '<p class="webinar-registered-badge">Vous êtes inscrit·e à cette session.</p>';
-        }
+        window.location.reload();
       });
     }
   }
@@ -497,9 +689,20 @@ export function bindWebinarDetailPage() {
   if (form) {
     const wid = form.getAttribute('data-webinar-id');
     const msg = document.getElementById('webinarGuestRegisterMsg');
+    const submitBtn = document.getElementById('btnWebinarGuestSubmit');
+    const termsGuest = document.getElementById('acceptTermsWebinarGuest');
+    function syncGuestSubmit() {
+      if (!submitBtn || !(termsGuest instanceof HTMLInputElement)) return;
+      const ok = termsGuest.checked;
+      submitBtn.disabled = !ok;
+      submitBtn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    }
+    termsGuest?.addEventListener('change', syncGuestSubmit);
+    syncGuestSubmit();
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!wid) return;
+      if (termsGuest instanceof HTMLInputElement && !termsGuest.checked) return;
       const fd = new FormData(form);
       const email = String(fd.get('email') || '').trim();
       const fullName = String(fd.get('fullName') || '').trim();
@@ -515,4 +718,55 @@ export function bindWebinarDetailPage() {
       window.location.reload();
     });
   }
+
+  const pack = document.querySelector('.webinar-registered-pack');
+  document.getElementById('btnWebinarCopyJoin')?.addEventListener('click', async () => {
+    const inp = document.getElementById('webinarJoinUrlField');
+    if (!inp || !(inp instanceof HTMLInputElement)) return;
+    try {
+      inp.select();
+      await navigator.clipboard.writeText(inp.value);
+    } catch {
+      try {
+        inp.select();
+        document.execCommand('copy');
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+  document.getElementById('btnWebinarDownloadIcs')?.addEventListener('click', () => {
+    const meta = parseIcsMetaFromPack(pack);
+    if (!meta?.startsAt) return;
+    const ics = buildWebinarIcsPayloadFromMeta(meta);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `webinaire-${String(meta.id || 'event').slice(0, 12)}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('btnWebinarSharePage')?.addEventListener('click', async () => {
+    const hid = document.getElementById('webinarShareUrlValue');
+    const shareUrl =
+      hid instanceof HTMLInputElement ? hid.value : window.location.href.split('#')[0];
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: document.querySelector('.webinar-detail-head .h1')?.textContent || 'Webinaire',
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        /* annulé ou indisponible */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert('Lien du webinaire copié dans le presse-papiers.');
+    } catch {
+      window.prompt('Copiez ce lien :', shareUrl);
+    }
+  });
 }

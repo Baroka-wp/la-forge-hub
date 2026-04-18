@@ -14,6 +14,8 @@ import {
   updateProfileDisplayName,
   loadCatalogSessions,
   fetchNextWebinarEvent,
+  fetchWebinarById,
+  fetchWebinars,
 } from './api.js';
 import { COURSE, PLATFORM_BRAND, TAG_LABELS } from './seed-data.js';
 
@@ -57,11 +59,14 @@ import {
 import {
   renderWebinarsPageHtml,
   renderWebinarDetailHtml,
+  readGuestWebinarRegisteredEmail,
   getDashboardWebinarBannerHtml,
   bindDashboardWebinarBanner,
   bindWebinarDetailPage,
 } from './webinars-ui.js';
 import { pushLoading, popLoading, withLoading } from './loader.js';
+import { renderCguPageHtml } from './legal-cgu.js';
+import { applySeoMeta, DEFAULT_SITE_DESCRIPTION, truncateMetaDescription } from './seo.js';
 
 /** Rempli au démarrage par `loadCatalogSessions()` (base Neon ou fallback fichier) */
 let sessions = [];
@@ -84,6 +89,7 @@ function matchRoute() {
   if (parts[0] === 'login') return { name: 'login' };
   if (parts[0] === 'register') return { name: 'register' };
   if (parts[0] === 'dashboard') return { name: 'dashboard' };
+  if (parts[0] === 'cgu') return { name: 'cgu' };
   if (parts[0] === 'webinars') {
     if (parts.length === 1) return { name: 'webinars' };
     if (parts.length === 2) return { name: 'webinar-detail', id: parts[1] };
@@ -118,8 +124,21 @@ function bindRouter() {
 }
 
 function shell(content, opts = {}) {
-  const { title = PLATFORM_BRAND, admin: adminPage = false, landing: landingPage = false } = opts;
+  const {
+    title = PLATFORM_BRAND,
+    admin: adminPage = false,
+    landing: landingPage = false,
+    description,
+    image,
+    noIndex = false,
+  } = opts;
   document.title = title;
+  applySeoMeta({
+    title,
+    description,
+    image,
+    noIndex: noIndex || adminPage,
+  });
   const user = currentUser;
   const dashboardIcon = `<a data-router href="/dashboard" class="nav-dashboard-icon" aria-label="Mon espace" title="Mon espace">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -176,6 +195,9 @@ function shell(content, opts = {}) {
     <main class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
     <footer class="site-footer">
       <p><strong>${escapeHtml(PLATFORM_BRAND)}</strong> — ${escapeHtml(COURSE.title)} · ${escapeHtml(COURSE.subtitle)}</p>
+      <p class="site-footer-links">
+        <a data-router href="/cgu">Conditions générales d’utilisation</a>
+      </p>
     </footer>
   `;
 }
@@ -250,21 +272,50 @@ async function render() {
     if (!app) return;
 
     if (route.name === 'home') {
-      app.innerHTML = shell(await renderHome(), { landing: true });
+      app.innerHTML = shell(await renderHome(), {
+        landing: true,
+        title: `${PLATFORM_BRAND} — Formation IA & webinaires`,
+        description: DEFAULT_SITE_DESCRIPTION,
+      });
     } else if (route.name === 'login') {
-    app.innerHTML = shell(renderAuth('login'), { title: `Connexion — ${PLATFORM_BRAND}` });
-    bindAuthForm('login');
-  } else if (route.name === 'register') {
-    app.innerHTML = shell(renderAuth('register'), { title: `Inscription — ${PLATFORM_BRAND}` });
-    bindAuthForm('register');
-  } else if (route.name === 'course' && route.slug === COURSE.slug) {
-    app.innerHTML = shell(await renderCourse(), { title: `${COURSE.title} — Parcours` });
-    bindCourseActions();
-  } else if (route.name === 'learn' && route.slug === COURSE.slug) {
-    app.innerHTML = shell(await renderLearn(route.lessonId), { title: 'Leçon — ML & IA' });
-    await bindLearnPage(route.lessonId);
-  } else if (route.name === 'webinars') {
-    app.innerHTML = shell(await renderWebinarsPageHtml(), { title: `Webinaires — ${PLATFORM_BRAND}` });
+      app.innerHTML = shell(renderAuth('login'), {
+        title: `Connexion — ${PLATFORM_BRAND}`,
+        description: `Connexion à votre compte ${PLATFORM_BRAND} : parcours Machine Learning & IA, progression et webinaires.`,
+      });
+      bindAuthForm('login');
+    } else if (route.name === 'register') {
+      app.innerHTML = shell(renderAuth('register'), {
+        title: `Inscription — ${PLATFORM_BRAND}`,
+        description: `Créez un compte pour suivre le parcours ${COURSE.title}, enregistrer votre progression et participer aux webinaires.`,
+      });
+      bindAuthForm('register');
+    } else if (route.name === 'cgu') {
+      app.innerHTML = shell(renderCguPageHtml(), {
+        title: `CGU — ${PLATFORM_BRAND}`,
+        description: `Conditions générales d’utilisation du site ${PLATFORM_BRAND} : compte, contenus, données personnelles et responsabilités.`,
+      });
+    } else if (route.name === 'course' && route.slug === COURSE.slug) {
+      app.innerHTML = shell(await renderCourse(), {
+        title: `${COURSE.title} — Parcours`,
+        description: truncateMetaDescription(`${COURSE.title} — ${COURSE.subtitle}. ${COURSE.lead}`),
+      });
+      bindCourseActions();
+    } else if (route.name === 'learn' && route.slug === COURSE.slug) {
+      const lesson = findLesson(route.lessonId);
+      const learnTitle = lesson ? `${lesson.title} — ${PLATFORM_BRAND}` : `Leçon — ${PLATFORM_BRAND}`;
+      const learnDesc = lesson
+        ? truncateMetaDescription(`${lesson.title}. Session du parcours « ${COURSE.title} ».`)
+        : undefined;
+      app.innerHTML = shell(await renderLearn(route.lessonId), {
+        title: learnTitle,
+        description: learnDesc,
+      });
+      await bindLearnPage(route.lessonId);
+    } else if (route.name === 'webinars') {
+      app.innerHTML = shell(await renderWebinarsPageHtml(), {
+        title: `Webinaires — ${PLATFORM_BRAND}`,
+        description: `Webinaires et replays ${PLATFORM_BRAND} : sessions en direct, inscriptions et visionnage des enregistrements.`,
+      });
   } else if (route.name === 'webinar-detail' && route.id) {
     if (route.id === 'next') {
       const next = await fetchNextWebinarEvent();
@@ -278,18 +329,43 @@ async function render() {
           <p class="muted">Il n’y a pas de session à venir pour l’instant.</p>
           <a data-router class="btn btn-primary" href="/webinars">Liste des webinaires</a>
         </section>`,
-        { title: `Webinaires — ${PLATFORM_BRAND}` },
+        {
+          title: `Webinaires — ${PLATFORM_BRAND}`,
+          description: `Aucune session à venir pour l’instant. Consultez la liste des webinaires et replays sur ${PLATFORM_BRAND}.`,
+        },
       );
       return;
     }
-    app.innerHTML = shell(await renderWebinarDetailHtml(route.id), { title: `Webinaire — ${PLATFORM_BRAND}` });
+    let webinarShell = { title: `Webinaire — ${PLATFORM_BRAND}`, description: undefined, image: undefined };
+    let webinarPreloaded = null;
+    if (backendMode() === 'neon') {
+      const guestEmail = readGuestWebinarRegisteredEmail(route.id) || '';
+      const [r, allList] = await Promise.all([
+        fetchWebinarById(route.id, { guestEmail }),
+        fetchWebinars(),
+      ]);
+      webinarPreloaded = { r, allList };
+      if (r.ok && r.webinar) {
+        const w = r.webinar;
+        webinarShell = {
+          title: `${w.title} — Webinaire`,
+          description: truncateMetaDescription(`${w.title}. ${w.description || ''}`),
+          image: w.bannerUrl && String(w.bannerUrl).trim() ? String(w.bannerUrl).trim() : undefined,
+        };
+      }
+    }
+    app.innerHTML = shell(await renderWebinarDetailHtml(route.id, webinarPreloaded), webinarShell);
     bindWebinarDetailPage();
   } else if (route.name === 'dashboard') {
     if (!currentUser) {
       navigate('/login');
       return;
     }
-    app.innerHTML = shell(await renderDashboard(), { title: `Mon espace — ${PLATFORM_BRAND}` });
+    app.innerHTML = shell(await renderDashboard(), {
+      title: `Mon espace — ${PLATFORM_BRAND}`,
+      description: `Tableau de bord personnel : progression, leçons et annonces webinaires (${PLATFORM_BRAND}).`,
+      noIndex: true,
+    });
     bindDashboard();
     bindDashboardWebinarBanner();
   } else if (
@@ -305,7 +381,11 @@ async function render() {
       return;
     }
     if (!currentUser.isAdmin) {
-      app.innerHTML = shell(renderAdminAccessDenied(), { title: `Accès admin — ${PLATFORM_BRAND}` });
+      app.innerHTML = shell(renderAdminAccessDenied(), {
+        title: `Accès admin — ${PLATFORM_BRAND}`,
+        description: 'Espace réservé aux administrateurs.',
+        noIndex: true,
+      });
       return;
     }
     if (route.name === 'admin') {
@@ -338,7 +418,11 @@ async function render() {
     } else {
       app.innerHTML = shell(
         `<section class="panel surface-card text-center"><h1 class="h1">Page introuvable</h1><p><a data-router href="/">Retour à l'accueil</a></p></section>`,
-        { title: '404' },
+        {
+          title: `Page introuvable — ${PLATFORM_BRAND}`,
+          description: 'La page demandée n’existe pas ou a été déplacée.',
+          noIndex: true,
+        },
       );
     }
 
@@ -548,11 +632,15 @@ async function renderCourse() {
         <a data-router class="btn btn-secondary btn-lg" href="/dashboard">Mon espace</a>
       </div>`
       : `<div class="landing-cta landing-cta--enroll">
+        <label class="landing-marketing-opt landing-terms-opt">
+          <input type="checkbox" id="acceptTermsEnroll" />
+          <span>J’ai lu et j’accepte les <a data-router href="/cgu" class="inline-legal-link">conditions générales d’utilisation</a> de La Forge Hub.</span>
+        </label>
         <label class="landing-marketing-opt">
           <input type="checkbox" id="enrollMarketingOptIn" />
           <span>J’accepte de recevoir des e-mails pour les annonces des prochaines activités de La Forge Hub (webinaires, formation).</span>
         </label>
-        <button type="button" class="btn btn-primary btn-lg" id="btnEnroll">S'inscrire au parcours</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btnEnroll" disabled aria-disabled="true">S'inscrire au parcours</button>
       </div>`;
 
   return `
@@ -591,8 +679,17 @@ async function renderCourse() {
 
 function bindCourseActions() {
   const btn = document.getElementById('btnEnroll');
+  const termsCb = document.getElementById('acceptTermsEnroll');
   if (btn && currentUser) {
+    function syncEnrollButton() {
+      const ok = termsCb instanceof HTMLInputElement && termsCb.checked;
+      btn.disabled = !ok;
+      btn.setAttribute('aria-disabled', ok ? 'false' : 'true');
+    }
+    termsCb?.addEventListener('change', syncEnrollButton);
+    syncEnrollButton();
     btn.addEventListener('click', async () => {
+      if (termsCb instanceof HTMLInputElement && !termsCb.checked) return;
       const marketingCb = document.getElementById('enrollMarketingOptIn');
       const marketingOptIn = marketingCb instanceof HTMLInputElement && marketingCb.checked;
       const r = await enroll(currentUser.id, COURSE.slug, marketingOptIn);

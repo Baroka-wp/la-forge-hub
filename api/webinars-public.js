@@ -3,6 +3,14 @@ import { optionalUser } from './_lib/auth.js';
 import { sendJson, setCors } from './_lib/http.js';
 import { normalizeEmail } from './_lib/email.js';
 
+/** req.originalUrl peut contenir ?regEmail=… malgré la normalisation de req.url. */
+function queryParamsFromReq(req) {
+  const u = String(req.originalUrl || req.url || '');
+  const qi = u.indexOf('?');
+  if (qi === -1) return new URLSearchParams();
+  return new URLSearchParams(u.slice(qi + 1));
+}
+
 /** Inscription liée au compte ou à l’e-mail (invité puis compte créé avec le même mail). */
 function registrationWhereForUser(user) {
   if (!user) return undefined;
@@ -32,6 +40,16 @@ function shouldAppearInKind(lifecycle, kind) {
 
 function serialize(w, extras = {}) {
   const lifecycle = webinarLifecycle(w);
+  const registered = extras.registered === true;
+  const now = new Date();
+  const upcomingOnlineJoin =
+    w.kind === 'EVENT' &&
+    w.locationType === 'ONLINE' &&
+    w.startsAt &&
+    new Date(w.startsAt) > now &&
+    !hasReplayUrl(w);
+  const hideJoinLink = upcomingOnlineJoin && !registered;
+
   return {
     id: w.id,
     kind: w.kind,
@@ -41,7 +59,7 @@ function serialize(w, extras = {}) {
     recordingUrl: w.recordingUrl,
     startsAt: w.startsAt ? w.startsAt.toISOString() : null,
     locationType: w.locationType,
-    onlineLink: w.onlineLink,
+    onlineLink: hideJoinLink ? null : w.onlineLink,
     venue: w.venue,
     bannerUrl: w.bannerUrl,
     registrationCount: w._count?.registrations ?? undefined,
@@ -104,8 +122,7 @@ export async function listWebinars(req, res) {
     const ordered = [...upcoming, ...replays];
 
     const webinars = ordered.map((w) => {
-      const registered =
-        w.kind === 'EVENT' && userId ? (w.registrations?.length ?? 0) > 0 : undefined;
+      const registered = w.kind === 'EVENT' && userId ? (w.registrations?.length ?? 0) > 0 : false;
       const { registrations: _r, ...rest } = w;
       return serialize(rest, { registered });
     });
@@ -159,8 +176,7 @@ export async function getNextWebinar(req, res) {
       return sendJson(res, 200, { webinar: null });
     }
 
-    const registered =
-      userId ? (next.registrations?.length ?? 0) > 0 : undefined;
+    const registered = userId ? (next.registrations?.length ?? 0) > 0 : false;
     const { registrations: _r, ...rest } = next;
     return sendJson(res, 200, { webinar: serialize(rest, { registered }) });
   } catch (e) {
@@ -187,6 +203,8 @@ export async function getWebinarById(req, res) {
     const userId = user?.id;
     const regWhere = registrationWhereForUser(user);
 
+    const regEmail = normalizeEmail(queryParamsFromReq(req).get('regEmail') || '');
+
     const w = await prisma.webinar.findFirst({
       where: { id, published: true },
       include: {
@@ -207,8 +225,26 @@ export async function getWebinarById(req, res) {
       return sendJson(res, 404, { error: 'Webinaire introuvable' });
     }
 
-    const registered =
-      w.kind === 'EVENT' && userId ? (w.registrations?.length ?? 0) > 0 : undefined;
+    let guestRegistered = false;
+    if (!userId && regEmail && w.kind === 'EVENT') {
+      const hit = await prisma.webinarRegistration.findFirst({
+        where: { webinarId: id, emailKey: regEmail },
+        select: { id: true },
+      });
+      guestRegistered = !!hit;
+    }
+
+    let registered = false;
+    if (w.kind === 'EVENT') {
+      if (userId) {
+        registered = (w.registrations?.length ?? 0) > 0;
+      } else if (regEmail) {
+        registered = guestRegistered;
+      } else {
+        registered = false;
+      }
+    }
+
     const { registrations: _r, ...rest } = w;
     return sendJson(res, 200, { webinar: serialize(rest, { registered }) });
   } catch (e) {
