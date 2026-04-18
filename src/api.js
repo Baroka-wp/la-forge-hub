@@ -19,16 +19,17 @@ function apiUrl(path) {
 }
 
 async function apiFetch(path, opts = {}) {
+  const { silentLoader = false, ...fetchOpts } = opts;
   const token = localStorage.getItem(JWT_KEY);
-  const headers = { ...opts.headers };
-  if (!(opts.body instanceof FormData) && !headers['Content-Type']) {
+  const headers = { ...(fetchOpts.headers || {}) };
+  if (!(fetchOpts.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
   if (token) headers.Authorization = `Bearer ${token}`;
-  const showLoader = neonMode();
+  const showLoader = neonMode() && !silentLoader;
   if (showLoader) pushLoading();
   try {
-    return await fetch(apiUrl(path), { ...opts, headers });
+    return await fetch(apiUrl(path), { ...fetchOpts, headers });
   } finally {
     if (showLoader) popLoading();
   }
@@ -623,7 +624,10 @@ export async function fetchAdminCrmContacts(params = {}) {
   if (params.pageSize != null) sp.set('pageSize', String(params.pageSize));
   if (params.q) sp.set('q', String(params.q));
   const qs = sp.toString();
-  const r = await apiFetch(`/api/admin/crm/contacts${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  const r = await apiFetch(`/api/admin/crm/contacts${qs ? `?${qs}` : ''}`, {
+    method: 'GET',
+    silentLoader: true,
+  });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     return {
