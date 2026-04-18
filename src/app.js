@@ -211,6 +211,25 @@ function escapeHtml(s) {
     .replace(/"/g, '&quot;');
 }
 
+/** Paragraphe description leçon — rien si vide ou blanc. */
+function lessonDescriptionBlock(lesson) {
+  const t = lesson?.description != null ? String(lesson.description).trim() : '';
+  if (!t) return '';
+  return `<p class="learn-desc">${escapeHtml(t)}</p>`;
+}
+
+/** Bloc lien notebook (Colab, etc.) — rien si pas d’URL utile. */
+function lessonCollabBlock(lesson) {
+  const url = lesson?.collabUrl != null ? String(lesson.collabUrl).trim() : '';
+  if (!url) return '';
+  return `<section class="collab-panel surface-card">
+          <div class="collab-panel-head">
+            <h2 class="h3 collab-panel-title">Notebook / corrigé</h2>
+            <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary collab-panel-btn">Ouvrir le notebook</a>
+          </div>
+        </section>`;
+}
+
 /** Hero « session » (accueil ou page Formation IA) — même structure visuelle. */
 function renderLandingHeroHtml({ title, lead, points, ctaBlock }) {
   const pointsHtml = (points || [])
@@ -478,9 +497,14 @@ function initCourseVideoCatalog(els) {
         row.className = 'video-row';
         row.dataset.router = '';
         row.href = `/learn/${COURSE.slug}/${encodeURIComponent(s.lessonId)}`;
+        const descText = s.description != null ? String(s.description).trim() : '';
+        const descBlock = descText ? `<div class="video-desc">${escapeHtml(descText)}</div>` : '';
         row.innerHTML = `
             <div class="video-date">${s.weekday} ${s.day}</div>
-            <div class="video-title">${escapeHtml(s.title)}</div>
+            <div class="video-main">
+              <div class="video-title">${escapeHtml(s.title)}</div>
+              ${descBlock}
+            </div>
             <div class="play-icon"><svg viewBox="0 0 12 14"><polygon points="0,0 12,7 0,14"/></svg></div>`;
         group.appendChild(row);
       });
@@ -787,6 +811,8 @@ async function renderLearn(lessonId) {
     return `
       <section class="panel surface-card">
         <h1 class="h1">${escapeHtml(lesson.title)}</h1>
+        ${lessonDescriptionBlock(lesson)}
+        ${lessonCollabBlock(lesson)}
         <p>Connectez-vous pour suivre la leçon et enregistrer votre progression.</p>
         <a data-router class="btn btn-primary" href="/login">Connexion</a>
         <a data-router class="btn btn-secondary" href="/register">Créer un compte</a>
@@ -798,6 +824,8 @@ async function renderLearn(lessonId) {
     return `
       <section class="panel surface-card">
         <h1 class="h1">${escapeHtml(lesson.title)}</h1>
+        ${lessonDescriptionBlock(lesson)}
+        ${lessonCollabBlock(lesson)}
         <p>Inscrivez-vous au parcours pour accéder au lecteur et à la communauté.</p>
         <a data-router class="btn btn-primary" href="/course/${COURSE.slug}">Voir le parcours</a>
       </section>`;
@@ -816,8 +844,10 @@ async function renderLearn(lessonId) {
       const mark = done
         ? `<span class="ci-done" aria-hidden="true" title="Terminée"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>`
         : `<span class="ci-num">${i + 1}</span>`;
+      const sid = s.description != null ? String(s.description).trim() : '';
+      const desc = sid ? `<span class="ci-desc">${escapeHtml(sid)}</span>` : '';
       return `<a data-router class="curriculum-item ${active ? 'active' : ''} ${done ? 'done' : ''}" href="/learn/${COURSE.slug}/${encodeURIComponent(s.lessonId)}">
-        ${mark}<span class="ci-title">${escapeHtml(s.title)}</span>
+        ${mark}<span class="ci-text"><span class="ci-title">${escapeHtml(s.title)}</span>${desc}</span>
       </a>`;
     })
     .join('');
@@ -829,19 +859,12 @@ async function renderLearn(lessonId) {
           <a data-router href="/course/${COURSE.slug}">Parcours</a> · Leçon ${idx + 1} / ${sessions.length}
         </div>
         <h1 class="h1 learn-title">${escapeHtml(lesson.title)}</h1>
+        ${lessonDescriptionBlock(lesson)}
         <div class="video-wrap">
           <iframe id="ytFrame" class="video-iframe" src="https://www.youtube.com/embed/${lesson.youtubeId}?enablejsapi=1" title="${escapeHtml(lesson.title)}"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
-        ${
-          lesson.collabUrl
-            ? `<section class="collab-panel surface-card">
-          <h2 class="h3">Notebook / corrigé (Colab)</h2>
-          <p class="muted small">Ressource liée à cette session — ouvrir dans un nouvel onglet.</p>
-          <a href="${escapeHtml(lesson.collabUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Ouvrir le notebook</a>
-        </section>`
-            : ''
-        }
+        ${lessonCollabBlock(lesson)}
         <div class="learn-toolbar">
           <label class="check-complete"><input type="checkbox" id="chkComplete" ${p.completed ? 'checked' : ''} /> Marquer comme terminée</label>
           <span id="saveHint" class="muted small"></span>

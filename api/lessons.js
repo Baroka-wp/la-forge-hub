@@ -27,6 +27,7 @@ export default async function lessonsHandler(req, res) {
       courseSlug: r.courseSlug,
       position: r.position,
       title: r.title,
+      description: r.description ?? null,
       youtubeId: r.youtubeId,
       tag: r.tag,
       url: `https://youtu.be/${r.youtubeId}`,

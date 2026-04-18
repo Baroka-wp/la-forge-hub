@@ -150,6 +150,8 @@ model Lesson {
   courseSlug  String    @default("formation-ia") @map("course_slug")
   position    Int
   title       String
+  /** Résumé affiché dans le menu des leçons et le catalogue (optionnel) */
+  description String?   @db.Text @map("description")
   youtubeId   String    @map("youtube_id")
   tag         String
   collabUrl   String?   @map("collab_url")

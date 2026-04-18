@@ -139,6 +139,7 @@ export async function renderAdminLessonsHtml(user) {
       <tr data-lesson-id="${id}">
         <td><code class="admin-code">${id}</code></td>
         <td><input type="text" class="admin-field" data-field="title" value="${esc(L.title)}" /></td>
+        <td><textarea class="admin-field admin-field--lesson-desc" data-field="description" rows="2" placeholder="Résumé (menu & catalogue)">${esc(L.description || '')}</textarea></td>
         <td><input type="text" class="admin-field" data-field="youtubeId" value="${esc(L.youtubeId)}" spellcheck="false" /></td>
         <td><input type="text" class="admin-field admin-field--narrow" data-field="tag" value="${esc(L.tag)}" /></td>
         <td><input type="number" class="admin-field admin-field--narrow" data-field="position" value="${L.position}" min="1" /></td>
@@ -164,6 +165,7 @@ export async function renderAdminLessonsHtml(user) {
         <label>Tag module<input type="text" name="tag" value="ml" /></label>
         <label>ID leçon (optionnel)<input type="text" name="lessonId" placeholder="${esc(COURSE.slug)}-0123 — laisser vide pour auto" /></label>
         <label class="admin-form-span2">Lien Colab / corrigé<input type="url" name="collabUrl" placeholder="https://colab.research.google.com/..." /></label>
+        <label class="admin-form-span2">Description courte (optionnel)<textarea name="description" rows="3" placeholder="Affichée dans le menu des leçons et le catalogue"></textarea></label>
         <div class="admin-form-actions">
           <button type="submit" class="btn btn-primary">Créer la leçon</button>
         </div>
@@ -193,6 +195,7 @@ export async function renderAdminLessonsHtml(user) {
           <tr>
             <th>ID</th>
             <th>Titre</th>
+            <th>Description</th>
             <th>YouTube ID</th>
             <th>Tag</th>
             <th>Pos.</th>
@@ -200,7 +203,7 @@ export async function renderAdminLessonsHtml(user) {
             <th></th>
           </tr>
         </thead>
-        <tbody>${rows || `<tr><td colspan="7" class="muted">Aucune leçon.</td></tr>`}</tbody>
+        <tbody>${rows || `<tr><td colspan="8" class="muted">Aucune leçon.</td></tr>`}</tbody>
       </table>
     </div>`;
 
@@ -569,12 +572,14 @@ export function bindAdminLessonsPage(ctx) {
     const tag = String(fd.get('tag') || 'ml').trim();
     const lessonIdRaw = String(fd.get('lessonId') || '').trim();
     const collabRaw = String(fd.get('collabUrl') || '').trim();
+    const descRaw = String(fd.get('description') || '').trim();
     const body = {
       title,
       youtubeId,
       tag,
       courseSlug: COURSE.slug,
       collabUrl: collabRaw || null,
+      description: descRaw || null,
     };
     if (lessonIdRaw) body.lessonId = lessonIdRaw;
     const r = await adminCreateLesson(body);
@@ -599,6 +604,7 @@ export function bindAdminLessonsPage(ctx) {
         if (!k) return;
         if (k === 'position') fields.position = Number(inp.value) || 1;
         else if (k === 'collabUrl') fields.collabUrl = inp.value.trim() || null;
+        else if (k === 'description') fields.description = inp.value.trim() || null;
         else fields[k] = inp.value.trim();
       });
       const r = await adminPatchLesson(lessonId, fields);

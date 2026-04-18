@@ -343,6 +343,7 @@ function lessonFromApi(row) {
     day,
     weekday,
     title: row.title,
+    description: row.description != null && String(row.description).trim() ? String(row.description).trim() : null,
     url: row.url || `https://youtu.be/${row.youtubeId}`,
     tag: row.tag,
     youtubeId: row.youtubeId,
@@ -357,7 +358,7 @@ function lessonFromApi(row) {
  */
 export async function loadCatalogSessions() {
   const localFallback = () =>
-    parseSessions(RAW_SESSIONS).map((s) => ({ ...s, collabUrl: null }));
+    parseSessions(RAW_SESSIONS).map((s) => ({ ...s, collabUrl: null, description: null }));
   if (!neonMode()) return localFallback();
   try {
     const r = await apiFetch(`/api/lessons?course=${encodeURIComponent(COURSE.slug)}`);

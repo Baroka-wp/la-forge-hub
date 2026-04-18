@@ -26,6 +26,8 @@ export async function createLesson(req, res) {
     const tag = (body.tag || 'ml').trim();
     let collabUrl = body.collabUrl != null ? String(body.collabUrl).trim() : '';
     collabUrl = collabUrl || null;
+    let description = body.description != null ? String(body.description).trim() : '';
+    description = description || null;
 
     if (!title) return sendJson(res, 400, { error: 'title requis' });
     if (!youtubeIdOk(youtubeId)) return sendJson(res, 400, { error: 'youtubeId invalide' });
@@ -51,6 +53,7 @@ export async function createLesson(req, res) {
         courseSlug,
         position,
         title,
+        description,
         youtubeId,
         tag,
         collabUrl,
@@ -93,6 +96,10 @@ export async function patchLesson(req, res) {
     if ('collabUrl' in body) {
       const c = body.collabUrl != null ? String(body.collabUrl).trim() : '';
       data.collabUrl = c || null;
+    }
+    if ('description' in body) {
+      const d = body.description != null ? String(body.description).trim() : '';
+      data.description = d || null;
     }
     if (body.recordedAt != null) data.recordedAt = body.recordedAt ? new Date(body.recordedAt) : null;
 
