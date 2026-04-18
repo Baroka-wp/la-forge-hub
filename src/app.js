@@ -123,6 +123,65 @@ function bindRouter() {
   window.addEventListener('popstate', () => render());
 }
 
+function closeNavDrawer() {
+  document.body.classList.remove('nav-drawer-open');
+  const drawer = document.getElementById('navDrawer');
+  const toggle = document.getElementById('navMenuToggle');
+  if (!drawer || !toggle) return;
+  drawer.classList.remove('is-open');
+  drawer.setAttribute('aria-hidden', 'true');
+  toggle.setAttribute('aria-expanded', 'false');
+  toggle.focus();
+}
+
+function openNavDrawer() {
+  if (typeof window !== 'undefined' && window.matchMedia('(min-width: 769px)').matches) return;
+  const drawer = document.getElementById('navDrawer');
+  const toggle = document.getElementById('navMenuToggle');
+  const closeBtn = document.getElementById('navDrawerClose');
+  if (!drawer || !toggle) return;
+  drawer.classList.add('is-open');
+  drawer.setAttribute('aria-hidden', 'false');
+  toggle.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('nav-drawer-open');
+  closeBtn?.focus();
+}
+
+/** Un seul jeu d’écouteurs (le DOM est recréé à chaque render). */
+function bindMobileNavOnce() {
+  if (bindMobileNavOnce._done) return;
+  bindMobileNavOnce._done = true;
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#navMenuToggle')) {
+      e.preventDefault();
+      const drawer = document.getElementById('navDrawer');
+      if (drawer?.classList.contains('is-open')) closeNavDrawer();
+      else openNavDrawer();
+      return;
+    }
+    if (e.target.closest('#navDrawerBackdrop') || e.target.closest('#navDrawerClose')) {
+      closeNavDrawer();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const drawer = document.getElementById('navDrawer');
+    if (drawer?.classList.contains('is-open')) {
+      e.preventDefault();
+      closeNavDrawer();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    const drawer = document.getElementById('navDrawer');
+    if (window.matchMedia('(min-width: 769px)').matches && drawer?.classList.contains('is-open')) {
+      closeNavDrawer();
+    }
+  });
+}
+
 function shell(content, opts = {}) {
   const {
     title = PLATFORM_BRAND,
@@ -149,9 +208,20 @@ function shell(content, opts = {}) {
   const logoutIcon = `<button type="button" class="nav-logout-icon" id="btnLogout" aria-label="Déconnexion" title="Déconnexion">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>`;
+  const drawerAccountBlock = user
+    ? `<hr class="nav-drawer-sep" />
+        <div class="nav-drawer-account">
+          <a data-router href="/dashboard" class="nav-drawer-account-link">Mon espace</a>
+          ${user.isAdmin ? `<a data-router href="/admin" class="nav-drawer-account-link">Administration</a>` : ''}
+          <button type="button" class="nav-drawer-logout" id="btnLogoutDrawer">Déconnexion</button>
+        </div>`
+    : '';
   return `
     <header class="site-header">
       <div class="header-inner">
+        <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-expanded="false" aria-controls="navDrawerPanel" aria-label="Ouvrir le menu">
+          <span class="nav-menu-toggle-bars" aria-hidden="true"></span>
+        </button>
         <a data-router href="/" class="brand">
           <span class="brand-mark" aria-hidden="true">
             <svg class="brand-mark-svg" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" focusable="false">
@@ -177,13 +247,13 @@ function shell(content, opts = {}) {
           </span>
           <span class="brand-text">${escapeHtml(PLATFORM_BRAND)}</span>
         </a>
-        <nav class="nav-main" aria-label="Navigation principale">
+        <nav class="nav-main nav-main--desktop" aria-label="Navigation principale">
           <a data-router href="/course/${COURSE.slug}">Formation IA</a>
           <a data-router href="/webinars">Webinaires</a>
         </nav>
         ${
           user
-            ? `<div class="nav-header-end"><div class="nav-icon-toolbar">
+            ? `<div class="nav-header-end nav-header-end--desktop"><div class="nav-icon-toolbar">
             ${dashboardIcon}
             ${user.isAdmin ? adminIcon : ''}
             ${logoutIcon}
@@ -192,6 +262,24 @@ function shell(content, opts = {}) {
         }
       </div>
     </header>
+    <div id="navDrawer" class="nav-drawer" aria-hidden="true">
+      <div class="nav-drawer-backdrop" id="navDrawerBackdrop" tabindex="-1"></div>
+      <div
+        id="navDrawerPanel"
+        class="nav-drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="navDrawerTitle"
+      >
+        <h2 id="navDrawerTitle" class="nav-drawer-title">Menu de navigation</h2>
+        <button type="button" class="nav-drawer-close" id="navDrawerClose" aria-label="Fermer le menu">×</button>
+        <nav class="nav-drawer-links" aria-label="Navigation principale">
+          <a data-router href="/course/${COURSE.slug}">Formation IA</a>
+          <a data-router href="/webinars">Webinaires</a>
+        </nav>
+        ${drawerAccountBlock}
+      </div>
+    </div>
     <main class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
     <footer class="site-footer">
       <p><strong>${escapeHtml(PLATFORM_BRAND)}</strong> — ${escapeHtml(COURSE.title)} · ${escapeHtml(COURSE.subtitle)}</p>
@@ -275,6 +363,7 @@ export async function initApp() {
     render();
   });
   bindRouter();
+  bindMobileNavOnce();
   await withLoading(async () => {
     await reloadCatalog();
     await refreshUser();
@@ -285,6 +374,7 @@ export async function initApp() {
 async function render() {
   pushLoading();
   try {
+    document.body.classList.remove('nav-drawer-open');
     await refreshUser();
     const route = matchRoute();
     const app = document.getElementById('app');
@@ -445,14 +535,16 @@ async function render() {
       );
     }
 
-    const logout = document.getElementById('btnLogout');
-    if (logout) {
-      logout.addEventListener('click', async () => {
-        await signOut();
-        currentUser = null;
-        navigate('/');
+    [document.getElementById('btnLogout'), document.getElementById('btnLogoutDrawer')]
+      .filter(Boolean)
+      .forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          closeNavDrawer();
+          await signOut();
+          currentUser = null;
+          navigate('/');
+        });
       });
-    }
   } finally {
     popLoading();
   }
