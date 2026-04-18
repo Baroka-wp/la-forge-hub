@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Neon : URL avec pooler pour l’app ; pour `prisma migrate`, ajoutez directUrl (URL non poolée) — voir doc Neon + Prisma
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  learner
+  admin
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @map("display_name")
+  role         UserRole @default(learner)
+  /** Accepte les e-mails d’annonces La Forge Hub (formation, webinaires). */
+  marketingOptIn Boolean @default(false) @map("marketing_opt_in")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  enrollments          Enrollment[]
+  lessonProgress       LessonProgress[]
+  posts                CommunityPost[]
+  webinarRegistrations WebinarRegistration[]
+
+  @@map("users")
+}
+
+enum WebinarKind {
+  ARCHIVE
+  EVENT
+}
+
+enum WebinarLocation {
+  ONLINE
+  ONSITE
+}
+
+/** Replay (ARCHIVE) ou session live à venir (EVENT) */
+model Webinar {
+  id           String           @id @default(uuid())
+  kind         WebinarKind
+  title        String
+  description  String
+  tag          String
+  recordingUrl String?          @map("recording_url")
+  startsAt     DateTime?        @map("starts_at")
+  locationType WebinarLocation? @map("location_type")
+  onlineLink   String?          @map("online_link")
+  venue        String?
+  bannerUrl    String?          @map("banner_url")
+  published    Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  registrations WebinarRegistration[]
+
+  @@index([kind, startsAt])
+  @@index([published])
+  @@map("webinars")
+}
+
+model WebinarRegistration {
+  id           String   @id @default(uuid())
+  webinarId    String   @map("webinar_id")
+  /** Compte plateforme ; null = inscription invité (email / téléphone / nom). */
+  userId       String?  @map("user_id")
+  /** E-mail normalisé (minuscule, trim) — clé de dédoublonnage par webinaire. */
+  emailKey     String   @map("email_key")
+  /** Téléphone WhatsApp (invités) ; optionnel pour comptes liés. */
+  guestPhone   String?  @map("guest_phone")
+  /** Nom complet (invités). */
+  guestName    String?  @map("guest_name")
+  /** Consentement e-mails annonces La Forge Hub au moment de l’inscription. */
+  marketingOptIn Boolean @default(false) @map("marketing_opt_in")
+  registeredAt DateTime @default(now()) @map("registered_at")
+
+  webinar Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([webinarId, emailKey])
+  @@index([webinarId])
+  @@map("webinar_registrations")
+}
+
+model Enrollment {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  courseSlug String   @default("formation-ia") @map("course_slug")
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseSlug])
+  @@map("enrollments")
+}
+
+/** Contacts dédupliqués par e-mail (CRM / annonces Brevo). */
+model MarketingContact {
+  id             String   @id @default(uuid())
+  emailKey       String   @unique @map("email_key")
+  displayName    String?  @map("display_name")
+  phone          String?
+  marketingOptIn Boolean  @default(false) @map("marketing_opt_in")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([marketingOptIn])
+  @@map("marketing_contacts")
+}
+
+model LessonProgress {
+  userId          String   @map("user_id")
+  lessonId        String   @map("lesson_id")
+  completed       Boolean  @default(false)
+  lastPositionSec Int      @default(0) @map("last_position_sec")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+model CommunityPost {
+  id        String   @id @default(uuid())
+  lessonId  String   @map("lesson_id")
+  userId    String   @map("user_id")
+  parentId  String?  @map("parent_id")
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent CommunityPost? @relation("PostThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies CommunityPost[] @relation("PostThread")
+
+  @@index([lessonId, createdAt(sort: Desc)])
+  @@map("community_posts")
+}
+
+/** Catalogue leçons (vidéos + lien Colab / corrigé) — alimenté par seed ou API admin */
+model Lesson {
+  lessonId    String    @id @map("lesson_id")
+  courseSlug  String    @default("formation-ia") @map("course_slug")
+  position    Int
+  title       String
+  youtubeId   String    @map("youtube_id")
+  tag         String
+  collabUrl   String?   @map("collab_url")
+  recordedAt  DateTime? @map("recorded_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@unique([courseSlug, position])
+  @@index([courseSlug])
+  @@map("lessons")
+}
