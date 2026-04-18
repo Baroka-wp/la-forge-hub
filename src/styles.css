@@ -58,6 +58,9 @@ body.forge-hub {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Évite le scroll horizontal sur petits écrans (CTA, grilles, marges négatives) */
+  overflow-x: clip;
+  max-width: 100%;
 }
 
 .body-lg {
@@ -75,6 +78,8 @@ body.forge-hub {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* —— Header : glass, pas de bordure —— */
@@ -92,11 +97,13 @@ body.forge-hub {
   width: 100%;
   max-width: none;
   margin: 0;
-  padding: 14px clamp(20px, 4vw, 48px);
+  padding: max(14px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 14px
+    max(16px, env(safe-area-inset-left, 0px));
   display: flex;
   align-items: center;
   gap: 20px;
   flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
 .brand {
@@ -106,6 +113,8 @@ body.forge-hub {
   text-decoration: none;
   color: var(--on-surface);
   font-weight: 700;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .brand-mark {
@@ -141,6 +150,8 @@ body.forge-hub {
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .brand-tagline {
@@ -157,6 +168,7 @@ body.forge-hub {
   flex: 1;
   align-items: center;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
 .nav-main a {
@@ -498,8 +510,10 @@ body:has(.home-landing) .site-footer {
   width: 100%;
   min-height: 0;
   margin: 0 auto;
-  padding: 0 clamp(16px, 4vw, 48px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px), 4vw);
+  padding-right: max(16px, env(safe-area-inset-right, 0px), 4vw);
   overflow: hidden;
+  box-sizing: border-box;
   animation: landing-hero-content-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
 }
 
@@ -676,6 +690,10 @@ body:has(.home-landing) .site-footer {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .landing-foot {
@@ -1711,18 +1729,23 @@ body:has(.home-landing) .site-footer {
   .stats-strip,
   .filter-bar,
   .video-list {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
   .video-row {
     grid-template-columns: 56px 1fr 32px;
   }
   .header-inner {
-    padding: 12px 16px;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 12px
+      max(14px, env(safe-area-inset-left, 0px));
+    gap: 12px;
   }
   .nav-main {
     width: 100%;
     order: 3;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    gap: 14px 18px;
   }
 }
 
@@ -3478,5 +3501,176 @@ body.is-global-loading .global-loader {
   .global-loader-ring {
     animation: none;
     border-top-color: var(--primary-container);
+  }
+}
+
+/* —— Mobile / petits écrans : pas de débordement horizontal, CTA lisibles, zones sûres —— */
+@media (max-width: 768px) {
+  html {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .site-main {
+    min-width: 0;
+  }
+
+  /* Accueil & parcours : boutons pleine largeur, texte long autorisé à revenir à la ligne */
+  .landing-cta,
+  .hero-cta,
+  .course-actions,
+  .dash-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-cta .btn,
+  .landing-cta .btn-lg,
+  .hero-cta .btn,
+  .course-actions .btn,
+  .dash-actions .btn {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: center;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .landing-cta--enroll .btn {
+    align-self: stretch;
+  }
+
+  .landing-hero-main .landing-cta .btn-lg {
+    font-size: clamp(0.95rem, 3.8vw, 1.0625rem);
+    padding: 12px 16px;
+  }
+
+  .site-footer {
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .site-footer p {
+    overflow-wrap: anywhere;
+  }
+
+  .panel {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .panel.surface-card,
+  .course-hero.panel.surface-card {
+    padding: 24px max(18px, env(safe-area-inset-left, 0px)) 40px max(18px, env(safe-area-inset-right, 0px));
+  }
+
+  .auth-panel {
+    margin-left: max(16px, env(safe-area-inset-left, 0px));
+    margin-right: max(16px, env(safe-area-inset-right, 0px));
+    max-width: none;
+    width: auto;
+    padding: 28px max(20px, env(safe-area-inset-left, 0px)) 32px max(20px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+  }
+
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-inline label,
+  .form-inline input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .form-inline .btn {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  /* Évite le zoom iOS sur focus des champs */
+  .form-stack input,
+  .form-stack textarea,
+  .form-inline input,
+  .auth-panel input {
+    font-size: 16px;
+  }
+
+  .glass-fab {
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    left: auto;
+    max-width: min(100%, calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+    white-space: normal;
+    text-align: center;
+    box-sizing: border-box;
+  }
+
+  .learn-layout {
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .learn-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .nav-prev-next {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .module-label {
+    top: 56px;
+  }
+
+  .webinar-detail-banner {
+    margin-left: 0;
+    margin-right: 0;
+    border-radius: var(--radius-md);
+  }
+
+  .webinar-detail-back--top {
+    padding-left: max(0.35rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.35rem, env(safe-area-inset-right, 0px));
+  }
+
+  .webinar-embed--drive-folder {
+    min-height: min(280px, 50vh);
+  }
+
+  .collab-panel-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .collab-panel-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .webinar-marketing-opt--compact {
+    max-width: none;
+  }
+
+  .webinar-guest-register .btn-primary {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 768px) and (min-width: 641px) {
+  .nav-main {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px 16px;
   }
 }
