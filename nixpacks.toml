@@ -1,0 +1,6 @@
+# Si Coolify utilise Nixpacks (sans Dockerfile), commande de démarrage explicite.
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm start"
