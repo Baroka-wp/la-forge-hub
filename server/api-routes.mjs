@@ -15,6 +15,7 @@ import { createLesson, patchLesson, deleteLesson } from '../api/admin-lessons.js
 import { overview, listUsers, patchUser } from '../api/admin-users.js';
 import { listWebinars, getNextWebinar, getWebinarById } from '../api/webinars-public.js';
 import { registerToWebinar } from '../api/webinars-register.js';
+import { replayOptin } from '../api/webinars-replay-optin.js';
 import {
   adminListWebinars,
   adminGetWebinar,
@@ -77,4 +78,5 @@ export function registerApiRoutes(app) {
 
   app.get('/api/webinars/:id', (req, res) => getWebinarById(req, res));
   app.post('/api/webinars/:id/register', (req, res) => registerToWebinar(req, res));
+  app.post('/api/webinars/replay-optin', (req, res) => replayOptin(req, res));
 }

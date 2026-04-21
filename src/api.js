@@ -404,6 +404,22 @@ export async function adminDeleteLesson(lessonId) {
   return { ok: true };
 }
 
+export async function subscribeToReplay(webinarId, payload = {}) {
+  if (!neonMode()) return { ok: false, error: 'Mode local' };
+  const body = {
+    webinarId,
+    email: payload.email || '',
+    fullName: payload.fullName || '',
+  };
+  const r = await apiFetch('/api/webinars/replay-optin', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText };
+  return { ok: true };
+}
+
 export async function fetchAdminOverview() {
   if (!neonMode()) return { ok: false, error: 'Mode local' };
   const r = await apiFetch('/api/admin/overview', { method: 'GET' });

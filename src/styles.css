@@ -4095,3 +4095,30 @@ body.is-global-loading .global-loader {
     align-self: stretch;
   }
 }
+
+
+.webinar-replay-optin {
+  margin-top: var(--space-4, 2rem);
+  padding: var(--space-4, 2rem);
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.webinar-replay-optin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.webinar-replay-optin-label input {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .webinar-replay-optin {
+    margin-top: var(--space-3, 1.5rem);
+    padding: var(--space-3, 1.5rem);
+  }
+}
