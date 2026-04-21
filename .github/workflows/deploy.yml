@@ -1,0 +1,24 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  coolify-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify restart
+        env:
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_APP_ID: ${{ secrets.COOLIFY_APPLICATION_ID }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+        run: |
+          if [ -z "$COOLIFY_URL" ] || [ -z "$COOLIFY_APP_ID" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "Missing Coolify secrets" >&2
+            exit 1
+          fi
+          curl -sS -X POST \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_ID/restart" || exit 1
