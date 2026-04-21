@@ -190,6 +190,17 @@ export async function adminListMarketingContacts(req, res) {
         const webinarRegistrationCount = await prisma.webinarRegistration.count({
           where: { emailKey: c.emailKey },
         });
+        const latestGuestRegistration =
+          !c.displayName || !c.phone
+            ? await prisma.webinarRegistration.findFirst({
+                where: {
+                  emailKey: c.emailKey,
+                  OR: [{ guestName: { not: null } }, { guestPhone: { not: null } }],
+                },
+                orderBy: { registeredAt: 'desc' },
+                select: { guestName: true, guestPhone: true },
+              })
+            : null;
         const user = await prisma.user.findUnique({
           where: { email: c.emailKey },
           select: { id: true },
@@ -197,11 +208,14 @@ export async function adminListMarketingContacts(req, res) {
         const hasFormationEnrollment = user
           ? (await prisma.enrollment.count({ where: { userId: user.id } })) > 0
           : false;
+        const displayName =
+          c.displayName || latestGuestRegistration?.guestName || null;
+        const phone = c.phone || latestGuestRegistration?.guestPhone || null;
         return {
           id: c.id,
           email: c.emailKey,
-          displayName: c.displayName,
-          phone: c.phone,
+          displayName,
+          phone,
           marketingOptIn: c.marketingOptIn,
           webinarRegistrationCount,
           hasFormationEnrollment,

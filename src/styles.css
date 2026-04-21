@@ -4116,9 +4116,51 @@ body.is-global-loading .global-loader {
   width: 100%;
 }
 
+.webinar-replay-optin-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+}
+
+.webinar-replay-optin-label .admin-label-text {
+  font-weight: 600;
+}
+
+.webinar-replay-optin-label input {
+  min-height: 44px;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+  color: var(--on-surface);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+
+.webinar-replay-optin-label input::placeholder {
+  color: var(--on-surface-variant);
+  opacity: 0.75;
+}
+
+.webinar-replay-optin-label input:focus {
+  outline: none;
+  border-color: rgba(36, 68, 235, 0.45);
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 3px rgba(36, 68, 235, 0.16);
+}
+
 @media (max-width: 768px) {
   .webinar-replay-optin {
     margin-top: var(--space-3, 1.5rem);
     padding: var(--space-3, 1.5rem);
+  }
+
+  .webinar-replay-optin-label input {
+    font-size: 16px;
   }
 }

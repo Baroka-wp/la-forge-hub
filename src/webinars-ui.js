@@ -617,10 +617,12 @@ export async function renderWebinarDetailHtml(id, preloaded = null) {
     hasPublicReplay(w)
       ? `<section class="webinar-replay-optin surface-container-low">
           <h2 class="h3">Recevoir les prochains webinaires</h2>
-          <p class="muted body-sm">Laissez votre e-mail pour être averti·e dès qu’un nouveau webinaire ou replay est publié.</p>
+          <p class="muted body-sm">Renseignez vos coordonnées pour être averti·e dès qu’un nouveau webinaire ou replay est publié.</p>
           <form id="formReplayOptin" class="webinar-replay-optin-form" data-webinar-id="${esc(w.id)}">
+            <label class="webinar-replay-optin-label"><span class="admin-label-text">Prénom</span><input type="text" name="firstName" required autocomplete="given-name" placeholder="Votre prénom" /></label>
+            <label class="webinar-replay-optin-label"><span class="admin-label-text">Nom</span><input type="text" name="lastName" required autocomplete="family-name" placeholder="Votre nom" /></label>
+            <label class="webinar-replay-optin-label"><span class="admin-label-text">Téléphone</span><input type="tel" name="phone" required autocomplete="tel" inputmode="tel" placeholder="+33 6 12 34 56 78" /></label>
             <label class="webinar-replay-optin-label"><span class="admin-label-text">E-mail</span><input type="email" name="email" required autocomplete="email" placeholder="vous@exemple.com" /></label>
-            <label class="webinar-replay-optin-label"><span class="admin-label-text">Prénom (facultatif)</span><input type="text" name="fullName" autocomplete="name" placeholder="Votre prénom" /></label>
             <button type="submit" class="btn btn-secondary">Recevoir les alertes</button>
             <p id="replayOptinMsg" class="form-error admin-msg" role="status"></p>
             <p class="muted small">En soumettant ce formulaire, vous acceptez de recevoir les annonces de La Forge Hub. Vous pourrez vous désabonner à tout moment.</p>
@@ -746,14 +748,16 @@ export function bindWebinarDetailPage() {
       if (!wid) return;
       const fd = new FormData(replayForm);
       const email = String(fd.get('email') || '').trim();
-      const fullName = String(fd.get('fullName') || '').trim();
-      if (!email) {
-        if (msg) msg.textContent = 'Indiquez votre e-mail.';
+      const firstName = String(fd.get('firstName') || '').trim();
+      const lastName = String(fd.get('lastName') || '').trim();
+      const phone = String(fd.get('phone') || '').trim();
+      if (!firstName || !lastName || !phone || !email) {
+        if (msg) msg.textContent = 'Merci de remplir prénom, nom, téléphone et e-mail.';
         return;
       }
       if (msg) msg.textContent = '';
       submitBtn?.setAttribute('disabled', 'true');
-      const r = await subscribeToReplay(wid, { email, fullName });
+      const r = await subscribeToReplay(wid, { email, firstName, lastName, phone });
       submitBtn?.removeAttribute('disabled');
       if (!r.ok) {
         if (msg) msg.textContent = r.error || "Erreur lors de l'envoi.";

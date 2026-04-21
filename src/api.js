@@ -409,7 +409,9 @@ export async function subscribeToReplay(webinarId, payload = {}) {
   const body = {
     webinarId,
     email: payload.email || '',
-    fullName: payload.fullName || '',
+    firstName: payload.firstName || '',
+    lastName: payload.lastName || '',
+    phone: payload.phone || '',
   };
   const r = await apiFetch('/api/webinars/replay-optin', {
     method: 'POST',

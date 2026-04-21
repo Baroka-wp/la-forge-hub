@@ -24,22 +24,29 @@ export async function replayOptin(req, res) {
     const body = await readJsonBody(req);
     const webinarId = String(body.webinarId || '').trim();
     const email = normalizeEmail(body.email);
-    const fullName = String(body.fullName || '').trim();
+    const firstName = String(body.firstName || '').trim();
+    const lastName = String(body.lastName || '').trim();
+    const phone = String(body.phone || '').trim();
 
     if (!webinarId) return sendJson(res, 400, { error: 'webinarId requis' });
     if (!email || !email.includes('@')) {
       return sendJson(res, 400, { error: 'E-mail invalide.' });
     }
+    if (!firstName) return sendJson(res, 400, { error: 'Prénom requis.' });
+    if (!lastName) return sendJson(res, 400, { error: 'Nom requis.' });
+    if (!phone) return sendJson(res, 400, { error: 'Téléphone requis.' });
 
     const webinar = await prisma.webinar.findUnique({ where: { id: webinarId } });
     if (!webinar || !webinar.published || !hasReplayAvailable(webinar)) {
       return sendJson(res, 404, { error: 'Replay introuvable pour ce webinaire.' });
     }
 
+    const displayName = `${firstName} ${lastName}`.trim();
+
     await upsertMarketingContact({
       emailKey: email,
-      displayName: fullName || null,
-      phone: null,
+      displayName: displayName || null,
+      phone: phone || null,
       marketingOptIn: true,
     });
 
