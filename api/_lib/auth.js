@@ -1,6 +1,7 @@
 import { verifyToken } from './jwt.js';
 import { getBearer } from './http.js';
 import { prisma } from './prisma.js';
+import { automationUserFromRequest } from './automationAuth.js';
 
 /** @param {{ role?: string } | null} user */
 export function isUserAdmin(user) {
@@ -21,8 +22,12 @@ export async function requireUser(req) {
   return { user };
 }
 
-/** JWT + colonne `users.role = admin` */
+/** JWT + colonne `users.role = admin` ou clé automation */
 export async function requireAdmin(req) {
+  const automationUser = automationUserFromRequest(req);
+  if (automationUser) {
+    return { user: automationUser, automation: true };
+  }
   const u = await requireUser(req);
   if (u.error) return u;
   if (!isUserAdmin(u.user)) {

@@ -19,7 +19,8 @@
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "admin:promote": "node scripts/promote-admin.mjs"
+    "admin:promote": "node scripts/promote-admin.mjs",
+    "deploy:coolify": "node scripts/coolify-deploy.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",
