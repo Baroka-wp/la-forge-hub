@@ -60,6 +60,7 @@ model Webinar {
   updatedAt    DateTime         @updatedAt @map("updated_at")
 
   registrations WebinarRegistration[]
+  replayViews   WebinarReplayView[]
 
   @@index([kind, startsAt])
   @@index([published])
@@ -87,6 +88,20 @@ model WebinarRegistration {
   @@unique([webinarId, emailKey])
   @@index([webinarId])
   @@map("webinar_registrations")
+}
+
+/** Vues uniques d’un replay (comptage interne, anonyme, 1 par navigateur). */
+model WebinarReplayView {
+  id        String   @id @default(uuid())
+  webinarId String   @map("webinar_id")
+  viewerKey String   @map("viewer_key")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  webinar Webinar @relation(fields: [webinarId], references: [id], onDelete: Cascade)
+
+  @@unique([webinarId, viewerKey])
+  @@index([webinarId, viewedAt(sort: Desc)])
+  @@map("webinar_replay_views")
 }
 
 model Enrollment {

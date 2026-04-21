@@ -5,6 +5,7 @@ import {
   fetchNextWebinarEvent,
   registerForWebinar,
   subscribeToReplay,
+  trackReplayView,
   getSession,
 } from './api.js';
 
@@ -527,6 +528,9 @@ export async function renderWebinarDetailHtml(id, preloaded = null) {
 
   const recUrl = w.recordingUrl && String(w.recordingUrl).trim();
   const emb = recUrl ? recordingEmbedSrc(recUrl) : null;
+  if (emb) {
+    void trackReplayView(w.id).catch(() => {});
+  }
 
   const iframeAttrs = emb
     ? `

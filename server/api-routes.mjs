@@ -12,10 +12,11 @@ import progress from '../api/progress.js';
 import posts from '../api/posts.js';
 import lessons from '../api/lessons.js';
 import { createLesson, patchLesson, deleteLesson } from '../api/admin-lessons.js';
-import { overview, listUsers, patchUser } from '../api/admin-users.js';
+import { overview, listUsers, getUserDetail, patchUser } from '../api/admin-users.js';
 import { listWebinars, getNextWebinar, getWebinarById } from '../api/webinars-public.js';
 import { registerToWebinar } from '../api/webinars-register.js';
 import { replayOptin } from '../api/webinars-replay-optin.js';
+import { trackReplayView } from '../api/webinars-replay-view.js';
 import {
   adminListWebinars,
   adminGetWebinar,
@@ -60,6 +61,7 @@ export function registerApiRoutes(app) {
   app.delete('/api/admin/lessons/:lessonId', (req, res) => deleteLesson(req, res));
   app.get('/api/admin/overview', (req, res) => overview(req, res));
   app.get('/api/admin/users', (req, res) => listUsers(req, res));
+  app.get('/api/admin/users/:userId', (req, res) => getUserDetail(req, res));
   app.patch('/api/admin/users/:userId', (req, res) => patchUser(req, res));
   app.get('/api/admin/crm/contacts', (req, res) => adminListMarketingContacts(req, res));
   app.post('/api/admin/crm/contacts', (req, res) => adminCreateMarketingContact(req, res));
@@ -78,5 +80,6 @@ export function registerApiRoutes(app) {
 
   app.get('/api/webinars/:id', (req, res) => getWebinarById(req, res));
   app.post('/api/webinars/:id/register', (req, res) => registerToWebinar(req, res));
+  app.post('/api/webinars/:id/replay-view', (req, res) => trackReplayView(req, res));
   app.post('/api/webinars/replay-optin', (req, res) => replayOptin(req, res));
 }

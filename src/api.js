@@ -35,6 +35,21 @@ async function apiFetch(path, opts = {}) {
   }
 }
 
+const ANON_VIEWER_KEY = 'lms_anon_viewer_key_v1';
+
+function getAnonViewerKey() {
+  try {
+    const existing = localStorage.getItem(ANON_VIEWER_KEY);
+    if (existing && existing.length >= 8) return existing;
+    const k = crypto.randomUUID();
+    localStorage.setItem(ANON_VIEWER_KEY, k);
+    return k;
+  } catch {
+    // fallback : pas persistant, donc moins précis, mais fonctionnel
+    return String(Math.random()).slice(2) + String(Date.now());
+  }
+}
+
 /* ---------- local (sans API) ---------- */
 
 function localUserKey() {
@@ -422,6 +437,19 @@ export async function subscribeToReplay(webinarId, payload = {}) {
   return { ok: true };
 }
 
+export async function trackReplayView(webinarId) {
+  if (!neonMode()) return { ok: false, error: 'Mode local' };
+  const viewerKey = getAnonViewerKey();
+  const r = await apiFetch(`/api/webinars/${encodeURIComponent(webinarId)}/replay-view`, {
+    method: 'POST',
+    body: JSON.stringify({ viewerKey }),
+    silentLoader: true,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText };
+  return { ok: true };
+}
+
 export async function fetchAdminOverview() {
   if (!neonMode()) return { ok: false, error: 'Mode local' };
   const r = await apiFetch('/api/admin/overview', { method: 'GET' });
@@ -430,12 +458,55 @@ export async function fetchAdminOverview() {
   return { ok: true, userCount: data.userCount, lessonCount: data.lessonCount, adminCount: data.adminCount };
 }
 
-export async function fetchAdminUsersList() {
-  if (!neonMode()) return { ok: false, error: 'Mode local', users: [] };
-  const r = await apiFetch('/api/admin/users', { method: 'GET' });
+/**
+ * @param {{ q?: string, role?: 'admin'|'learner'|'', page?: number, pageSize?: number }} [params]
+ */
+export async function fetchAdminUsersList(params = {}) {
+  if (!neonMode()) return { ok: false, error: 'Mode local', users: [], total: 0, page: 1, pageSize: 25, totalPages: 1 };
+  const sp = new URLSearchParams();
+  if (params.q) sp.set('q', String(params.q));
+  if (params.role) sp.set('role', String(params.role));
+  if (params.page != null) sp.set('page', String(params.page));
+  if (params.pageSize != null) sp.set('pageSize', String(params.pageSize));
+  const qs = sp.toString();
+  const r = await apiFetch(`/api/admin/users${qs ? `?${qs}` : ''}`, { method: 'GET' });
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) return { ok: false, error: data.error || r.statusText, users: [] };
-  return { ok: true, users: data.users || [] };
+  if (!r.ok) {
+    return {
+      ok: false,
+      error: data.error || r.statusText,
+      users: [],
+      total: 0,
+      page: 1,
+      pageSize: 25,
+      totalPages: 1,
+      totals: { total: 0, admins: 0, learners: 0, newLast30Days: 0 },
+    };
+  }
+  return {
+    ok: true,
+    users: data.users || [],
+    total: data.total ?? 0,
+    page: data.page ?? 1,
+    pageSize: data.pageSize ?? 25,
+    totalPages: data.totalPages ?? 1,
+    totals: data.totals || { total: 0, admins: 0, learners: 0, newLast30Days: 0 },
+  };
+}
+
+export async function fetchAdminUserDetail(userId) {
+  if (!neonMode()) return { ok: false, error: 'Mode local', user: null };
+  const r = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, { method: 'GET' });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText, user: null };
+  return {
+    ok: true,
+    user: data.user || null,
+    enrollments: data.enrollments || [],
+    progress: data.progress || { total: 0, completed: 0, completionRate: 0, rows: [] },
+    webinars: data.webinars || [],
+    crm: data.crm || null,
+  };
 }
 
 export async function adminPatchUser(userId, fields) {
@@ -516,7 +587,7 @@ export async function registerForWebinar(webinarId, guest) {
 }
 
 /**
- * @param {{ page?: number, pageSize?: number, lifecycle?: string, q?: string }} [params]
+ * @param {{ page?: number, pageSize?: number, lifecycle?: string, q?: string, published?: boolean|string }} [params]
  */
 export async function fetchAdminWebinars(params = {}) {
   if (!neonMode()) {
@@ -529,6 +600,7 @@ export async function fetchAdminWebinars(params = {}) {
       totalPages: 0,
       replayMissingCount: 0,
       firstReplayMissingId: null,
+      totals: { total: 0, upcoming: 0, replayReady: 0, replayMissing: 0, replayViews: 0 },
     };
   }
   const sp = new URLSearchParams();
@@ -536,6 +608,7 @@ export async function fetchAdminWebinars(params = {}) {
   if (params.pageSize != null) sp.set('pageSize', String(params.pageSize));
   if (params.lifecycle) sp.set('lifecycle', String(params.lifecycle));
   if (params.q) sp.set('q', String(params.q));
+  if (params.published != null && params.published !== '') sp.set('published', String(params.published));
   const qs = sp.toString();
   const r = await apiFetch(`/api/admin/webinars${qs ? `?${qs}` : ''}`, { method: 'GET' });
   const data = await r.json().catch(() => ({}));
@@ -550,6 +623,7 @@ export async function fetchAdminWebinars(params = {}) {
       totalPages: 0,
       replayMissingCount: 0,
       firstReplayMissingId: null,
+      totals: { total: 0, upcoming: 0, replayReady: 0, replayMissing: 0, replayViews: 0 },
     };
   }
   return {
@@ -561,6 +635,7 @@ export async function fetchAdminWebinars(params = {}) {
     totalPages: data.totalPages ?? 1,
     replayMissingCount: data.replayMissingCount ?? 0,
     firstReplayMissingId: data.firstReplayMissingId ?? null,
+    totals: data.totals || { total: 0, upcoming: 0, replayReady: 0, replayMissing: 0, replayViews: 0 },
   };
 }
 
@@ -632,16 +707,27 @@ export async function fetchAdminWebinarRegistrations(webinarId) {
 }
 
 /**
- * @param {{ page?: number, pageSize?: number, q?: string }} [params]
+ * @param {{ page?: number, pageSize?: number, q?: string, marketingOptIn?: boolean|string }} [params]
  */
 export async function fetchAdminCrmContacts(params = {}) {
   if (!neonMode()) {
-    return { ok: false, contacts: [], total: 0, page: 1, pageSize: 25, totalPages: 0 };
+    return {
+      ok: false,
+      contacts: [],
+      total: 0,
+      page: 1,
+      pageSize: 25,
+      totalPages: 0,
+      totals: { total: 0, optIn: 0, withPhone: 0 },
+    };
   }
   const sp = new URLSearchParams();
   if (params.page != null) sp.set('page', String(params.page));
   if (params.pageSize != null) sp.set('pageSize', String(params.pageSize));
   if (params.q) sp.set('q', String(params.q));
+  if (params.marketingOptIn != null && params.marketingOptIn !== '') {
+    sp.set('marketingOptIn', String(params.marketingOptIn));
+  }
   const qs = sp.toString();
   const r = await apiFetch(`/api/admin/crm/contacts${qs ? `?${qs}` : ''}`, {
     method: 'GET',
@@ -657,6 +743,7 @@ export async function fetchAdminCrmContacts(params = {}) {
       page: 1,
       pageSize: 25,
       totalPages: 0,
+      totals: { total: 0, optIn: 0, withPhone: 0 },
     };
   }
   return {
@@ -666,6 +753,7 @@ export async function fetchAdminCrmContacts(params = {}) {
     page: data.page ?? 1,
     pageSize: data.pageSize ?? 25,
     totalPages: data.totalPages ?? 1,
+    totals: data.totals || { total: 0, optIn: 0, withPhone: 0 },
   };
 }
 

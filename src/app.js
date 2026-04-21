@@ -45,9 +45,11 @@ import {
   renderAdminOverviewHtml,
   renderAdminLessonsHtml,
   renderAdminUsersHtml,
+  renderAdminUserDetailHtml,
   renderAdminCrmHtml,
   bindAdminLessonsPage,
   bindAdminUsersPage,
+  bindAdminUserDetailPage,
   bindAdminCrmPage,
 } from './admin.js';
 import {
@@ -97,7 +99,10 @@ function matchRoute() {
   if (parts[0] === 'admin') {
     if (parts.length === 1) return { name: 'admin' };
     if (parts[1] === 'lessons') return { name: 'admin-lessons' };
-    if (parts[1] === 'users') return { name: 'admin-users' };
+    if (parts[1] === 'users') {
+      if (parts.length === 2) return { name: 'admin-users' };
+      if (parts.length === 3) return { name: 'admin-user-detail', id: parts[2] };
+    }
     if (parts[1] === 'crm') return { name: 'admin-crm' };
     if (parts[1] === 'webinars') {
       if (parts.length === 2) return { name: 'admin-webinars' };
@@ -481,6 +486,7 @@ async function render() {
     route.name === 'admin' ||
     route.name === 'admin-lessons' ||
     route.name === 'admin-users' ||
+    route.name === 'admin-user-detail' ||
     route.name === 'admin-crm' ||
     route.name === 'admin-webinars' ||
     route.name === 'admin-webinar-detail'
@@ -509,6 +515,17 @@ async function render() {
       app.innerHTML = shell(await renderAdminUsersHtml(currentUser), { title: `Admin — Utilisateurs — ${PLATFORM_BRAND}`, admin: true });
       bindAdminUsersPage({
         refreshUser,
+        navigate,
+        currentUserId: currentUser?.id,
+      });
+    } else if (route.name === 'admin-user-detail' && route.id) {
+      app.innerHTML = shell(await renderAdminUserDetailHtml(currentUser, route.id), {
+        title: `Admin — Utilisateur — ${PLATFORM_BRAND}`,
+        admin: true,
+      });
+      bindAdminUserDetailPage({
+        refreshUser,
+        navigate,
         currentUserId: currentUser?.id,
       });
     } else if (route.name === 'admin-crm') {

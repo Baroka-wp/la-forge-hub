@@ -64,25 +64,26 @@ const ADMIN_WEBINARS_PAGE_SIZE = 15;
 
 function webinarTableRowsHtml(list, highlightedId) {
   if (!list.length) {
-    return `<tr><td colspan="7" class="muted">Aucun webinaire pour cette page ou ces filtres.</td></tr>`;
+    return `<tr><td colspan="6" class="muted">Aucun webinaire pour cette page ou ces filtres.</td></tr>`;
   }
   return list
     .map((w) => {
       const id = esc(w.id);
       const status = statusMeta(w);
       const when = w.startsAt ? new Date(w.startsAt).toLocaleString('fr-FR') : '—';
-      const pub = w.published ? 'Oui' : 'Non';
       const rowClass = highlightedId === w.id ? 'admin-webinar-row is-highlighted' : 'admin-webinar-row';
       return `
       <tr data-webinar-id="${id}" data-lifecycle="${esc(status.code)}" data-search="${esc(`${w.title} ${w.tag}`.toLowerCase())}" class="${rowClass}">
         <td><span class="admin-webinar-status ${status.className}">${esc(status.label)}</span></td>
-        <td>${esc(w.title)}</td>
+        <td>
+          <a data-router href="/admin/webinars/${id}" class="admin-link-title">${esc(w.title)}</a>
+          <div class="muted small">${when}${w.published ? '' : ' · Non publié'}</div>
+        </td>
         <td>${esc(w.tag)}</td>
-        <td class="muted">${when}</td>
         <td>${w.registrationCount ?? 0}</td>
-        <td>${pub}</td>
+        <td>${w.replayViewCount ?? 0}</td>
         <td class="admin-actions">
-          <a data-router href="/admin/webinars/${id}" class="btn btn-secondary btn-sm">Modifier</a>
+          <a data-router href="/admin/webinars/${id}" class="btn btn-secondary btn-sm">Ouvrir</a>
           <button type="button" class="admin-icon-btn admin-icon-btn--danger" data-delete-webinar="${id}" aria-label="Supprimer" title="Supprimer">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           </button>
@@ -112,6 +113,7 @@ export async function renderAdminWebinarsHtml(user) {
         totalPages: 1,
         replayMissingCount: 0,
         firstReplayMissingId: null,
+        totals: { total: 0, upcoming: 0, replayReady: 0, replayMissing: 0, replayViews: 0 },
       };
   const list = fetched.ok ? fetched.webinars : [];
   const flash = consumeFlash();
@@ -143,11 +145,16 @@ export async function renderAdminWebinarsHtml(user) {
   const pagerMeta = webinarPagerMetaText({ ...meta, total: meta.total });
   const prevDisabled = meta.page <= 1 ? 'disabled' : '';
   const nextDisabled = meta.page >= meta.totalPages ? 'disabled' : '';
+  const totals = fetched.totals || { total: 0, upcoming: 0, replayReady: 0, replayMissing: 0, replayViews: 0 };
 
-  const form = `
-    <section class="admin-new-lesson surface-container-low">
-      <h2 class="h3">Nouveau webinaire</h2>
-      <p class="muted body-sm admin-form-intro">Créez d’abord la session (date, lieu). Vous pourrez ajouter le <strong>lien du replay</strong> (YouTube, Drive…) après la diffusion, depuis <strong>Modifier</strong>.</p>
+  const drawer = `
+    <div id="adminWebinarDrawerOverlay" class="admin-drawer-overlay" hidden></div>
+    <aside id="adminWebinarDrawer" class="admin-drawer" aria-hidden="true">
+      <div class="admin-drawer-head">
+        <h2 class="h3">Nouveau webinaire</h2>
+        <button type="button" class="admin-drawer-close" id="adminWebinarDrawerClose" aria-label="Fermer">×</button>
+      </div>
+      <p class="muted body-sm admin-form-intro">Créez d’abord la session (date, lieu). Vous pourrez ajouter le <strong>lien du replay</strong> après la diffusion.</p>
       <form id="adminNewWebinarForm" class="admin-form-grid admin-form-grid--webinar">
         <label><span class="admin-label-text">Titre</span><input type="text" name="title" required placeholder="Titre" /></label>
         <label class="admin-form-span2"><span class="admin-label-text">Description</span><textarea name="description" rows="4" required placeholder="Description courte"></textarea></label>
@@ -166,20 +173,37 @@ export async function renderAdminWebinarsHtml(user) {
         </div>
         <div class="admin-form-actions">
           <button type="submit" class="btn btn-primary">Créer</button>
+          <button type="button" class="btn btn-secondary" id="adminWebinarDrawerCancel">Annuler</button>
         </div>
       </form>
-    </section>`;
+    </aside>`;
 
   const inner = `
     <header class="admin-page-head">
-      <h1 class="h1">Webinaires</h1>
-      <p class="muted body-lg">Création d’une session, puis ajout du replay quand il est prêt.</p>
+      <div class="admin-page-head-row">
+        <div>
+          <h1 class="h1">Webinaires</h1>
+          <p class="muted body-lg">Liste des sessions et replays, avec suivi des inscriptions et vues.</p>
+        </div>
+        ${neon ? '<button type="button" id="adminWebinarNewBtn" class="btn btn-primary">+ Nouveau webinaire</button>' : ''}
+      </div>
     </header>
-    ${neon ? form : `<p class="muted">Mode local : gestion des webinaires indisponible.</p>`}
+    ${neon ? `
+      <section class="admin-kpi-row">
+        <article class="admin-kpi-card surface-container-low"><span class="muted small">Total</span><strong>${totals.total ?? 0}</strong></article>
+        <article class="admin-kpi-card surface-container-low"><span class="muted small">A venir</span><strong>${totals.upcoming ?? 0}</strong></article>
+        <article class="admin-kpi-card surface-container-low"><span class="muted small">Replay prêt</span><strong>${totals.replayReady ?? 0}</strong></article>
+        <article class="admin-kpi-card surface-container-low"><span class="muted small">Replay manquant</span><strong>${totals.replayMissing ?? 0}</strong></article>
+        <article class="admin-kpi-card surface-container-low"><span class="muted small">Vues replay</span><strong>${totals.replayViews ?? 0}</strong></article>
+      </section>` : `<p class="muted">Mode local : gestion des webinaires indisponible.</p>`}
     ${reminder}
     ${flashMsg}
     <p id="adminWebinarsMsg" class="admin-msg form-error" role="status"></p>
-    <div class="admin-webinar-toolbar">
+    <div class="admin-toolbar admin-webinar-toolbar">
+      <label>
+        <span class="admin-label-text">Recherche</span>
+        <input id="adminWebinarSearch" type="search" placeholder="Titre ou tag" />
+      </label>
       <label>
         <span class="admin-label-text">Filtre statut</span>
         <select id="adminWebinarFilterStatus">
@@ -190,9 +214,28 @@ export async function renderAdminWebinarsHtml(user) {
         </select>
       </label>
       <label>
-        <span class="admin-label-text">Recherche</span>
-        <input id="adminWebinarSearch" type="search" placeholder="Titre ou tag" />
+        <span class="admin-label-text">Publication</span>
+        <select id="adminWebinarFilterPublished">
+          <option value="">Tous</option>
+          <option value="true">Publiés</option>
+          <option value="false">Non publiés</option>
+        </select>
       </label>
+    </div>
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Statut</th>
+            <th>Titre</th>
+            <th>Tag</th>
+            <th>Inscrits</th>
+            <th>Vues replay</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="adminWebinarsTbody">${rows}</tbody>
+      </table>
     </div>
     <nav class="admin-webinars-pager" id="adminWebinarsPager" aria-label="Pagination des webinaires">
       <p class="admin-webinars-pager-meta" id="adminWebinarsPagerMeta">${esc(pagerMeta)}</p>
@@ -201,22 +244,7 @@ export async function renderAdminWebinarsHtml(user) {
         <button type="button" class="btn btn-secondary btn-sm" id="adminWebinarsPagerNext" ${nextDisabled}>Suivant</button>
       </div>
     </nav>
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>Statut</th>
-            <th>Titre</th>
-            <th>Tag</th>
-            <th>Date</th>
-            <th>Inscrits</th>
-            <th>Publié</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="adminWebinarsTbody">${rows}</tbody>
-      </table>
-    </div>`;
+    ${neon ? drawer : ''}`;
 
   return wrapAdminPage('webinars', inner, user);
 }
@@ -226,14 +254,19 @@ export async function renderAdminWebinarsHtml(user) {
  */
 export function bindAdminWebinarsPage(ctx) {
   const msg = document.getElementById('adminWebinarsMsg');
-  const reminder = document.getElementById('adminWebinarReminder');
   const form = document.getElementById('adminNewWebinarForm');
   const filterStatus = document.getElementById('adminWebinarFilterStatus');
+  const filterPublished = document.getElementById('adminWebinarFilterPublished');
   const filterSearch = document.getElementById('adminWebinarSearch');
   const tbody = document.getElementById('adminWebinarsTbody');
   const pagerMeta = document.getElementById('adminWebinarsPagerMeta');
   const prevBtn = document.getElementById('adminWebinarsPagerPrev');
   const nextBtn = document.getElementById('adminWebinarsPagerNext');
+  const openDrawerBtn = document.getElementById('adminWebinarNewBtn');
+  const drawer = document.getElementById('adminWebinarDrawer');
+  const drawerOverlay = document.getElementById('adminWebinarDrawerOverlay');
+  const closeDrawerBtn = document.getElementById('adminWebinarDrawerClose');
+  const cancelDrawerBtn = document.getElementById('adminWebinarDrawerCancel');
   const locSel = document.getElementById('webinarLocationType');
   const onlineIn = document.getElementById('webinarOnlineLink');
   const venueIn = document.getElementById('webinarVenue');
@@ -255,10 +288,33 @@ export function bindAdminWebinarsPage(ctx) {
   locSel?.addEventListener('change', syncLocation);
   syncLocation();
 
+  function closeDrawer() {
+    if (!drawer || !drawerOverlay) return;
+    drawer.setAttribute('aria-hidden', 'true');
+    drawer.classList.remove('admin-drawer--open');
+    drawerOverlay.hidden = true;
+  }
+
+  function openDrawer() {
+    if (!drawer || !drawerOverlay) return;
+    drawer.setAttribute('aria-hidden', 'false');
+    drawer.classList.add('admin-drawer--open');
+    drawerOverlay.hidden = false;
+  }
+
+  openDrawerBtn?.addEventListener('click', openDrawer);
+  closeDrawerBtn?.addEventListener('click', closeDrawer);
+  cancelDrawerBtn?.addEventListener('click', closeDrawer);
+  drawerOverlay?.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDrawer();
+  });
+
   async function loadWebinarTable({ resetPage = false } = {}) {
     if (!neon || !tbody) return;
     if (resetPage) page = 1;
     const lifecycle = String(filterStatus?.value || '').trim();
+    const published = String(filterPublished?.value || '').trim();
     const q = String(filterSearch?.value || '').trim();
     if (prevBtn) prevBtn.disabled = true;
     if (nextBtn) nextBtn.disabled = true;
@@ -266,6 +322,7 @@ export function bindAdminWebinarsPage(ctx) {
       page,
       pageSize: ADMIN_WEBINARS_PAGE_SIZE,
       lifecycle: lifecycle || undefined,
+      published: published || undefined,
       q: q || undefined,
     });
     if (!r.ok) {
@@ -290,6 +347,9 @@ export function bindAdminWebinarsPage(ctx) {
   filterStatus?.addEventListener('change', () => {
     loadWebinarTable({ resetPage: true });
   });
+  filterPublished?.addEventListener('change', () => {
+    loadWebinarTable({ resetPage: true });
+  });
   filterSearch?.addEventListener('input', () => {
     window.clearTimeout(searchDebounce);
     searchDebounce = window.setTimeout(() => {
@@ -305,25 +365,6 @@ export function bindAdminWebinarsPage(ctx) {
     page += 1;
     loadWebinarTable();
   });
-
-  if (reminder) {
-    const c = Number(reminder.getAttribute('data-count') || 0);
-    if (c > 0) {
-      window.setTimeout(() => {
-        const toast = document.createElement('div');
-        toast.className = 'admin-webinar-toast';
-        toast.textContent = `${c} webinaire(s) passe(s) attend(ent) un replay.`;
-        document.body.appendChild(toast);
-        window.setTimeout(() => {
-          toast.classList.add('is-visible');
-        }, 20);
-        window.setTimeout(() => {
-          toast.classList.remove('is-visible');
-          window.setTimeout(() => toast.remove(), 250);
-        }, 2800);
-      }, 120);
-    }
-  }
 
   async function showMsg(text, isErr) {
     if (!msg) return;
@@ -374,6 +415,7 @@ export function bindAdminWebinarsPage(ctx) {
     }
     form.reset();
     syncLocation();
+    closeDrawer();
     sessionStorage.setItem(
       ADMIN_WEBINAR_FLASH_KEY,
       JSON.stringify({ id: r.webinar?.id || null, text: 'Webinaire publie avec succes.' }),
@@ -454,31 +496,57 @@ export async function renderAdminWebinarDetailHtml(user, webinarId) {
   const editForm = `
     <section class="admin-new-lesson surface-container-low">
       <h2 class="h3">Modifier ce webinaire</h2>
-      <p class="muted body-sm">Session ci-dessous ; le <strong>replay</strong> s’ajoute dans la zone prévue (souvent après la date de diffusion).</p>
+      <p class="muted body-sm">Utilisez les onglets pour séparer la session, le replay et les participants.</p>
       ${replayPrompt}
+      <div class="admin-tabs" id="adminWebinarTabs">
+        <button type="button" class="admin-tab is-active" data-tab-target="session">Session</button>
+        <button type="button" class="admin-tab" data-tab-target="replay">Replay</button>
+        <button type="button" class="admin-tab" data-tab-target="participants">Participants</button>
+      </div>
       <form id="adminEditWebinarForm" class="admin-form-grid admin-form-grid--webinar" data-webinar-id="${esc(w.id)}">
-        <label><span class="admin-label-text">Titre</span><input type="text" name="title" required value="${esc(w.title)}" /></label>
-        <label class="admin-form-span2"><span class="admin-label-text">Description</span><textarea name="description" rows="4" required>${esc(w.description)}</textarea></label>
-        <label><span class="admin-label-text">Tag</span><input type="text" name="tag" required value="${esc(w.tag)}" /></label>
-        <label class="admin-form-span2"><span class="admin-label-text">Publié sur le site</span><input type="checkbox" name="published" ${pubChecked} /></label>
-        <div class="admin-webinar-event-fields">
-          <label><span class="admin-label-text">Date et heure</span><input type="datetime-local" name="startsAt" required value="${esc(startsLocal)}" /></label>
-          <label><span class="admin-label-text">Lieu</span>
-            <select name="locationType" id="webinarLocationTypeEdit">
-              <option value="ONLINE" ${locOnline}>En ligne</option>
-              <option value="ONSITE" ${locOnsite}>Présentiel</option>
-            </select>
-          </label>
-          <label class="admin-webinar-field-full"><span class="admin-label-text">Lien visio (si en ligne)</span><input type="url" name="onlineLink" id="webinarOnlineLinkEdit" value="${esc(w.onlineLink || '')}" placeholder="https://zoom… ou meet…" /></label>
-          <label class="admin-webinar-field-full"><span class="admin-label-text">Lieu / salle (si présentiel)</span><input type="text" name="venue" id="webinarVenueEdit" value="${esc(w.venue || '')}" placeholder="Adresse ou salle" autocomplete="address-line1" /></label>
-          <label class="admin-webinar-field-full"><span class="admin-label-text">URL bannière (image)</span><input type="url" name="bannerUrl" value="${esc(w.bannerUrl || '')}" placeholder="https://…jpg" /></label>
-        </div>
-        <div class="admin-form-span2 admin-webinar-replay-block">
-          <h3 class="h3">Replay (après la session)</h3>
-          <p class="muted body-sm">Une fois la vidéo prête, collez le lien public (YouTube, Drive partagé, etc.).</p>
-          <label class="admin-webinar-field-full"><span class="admin-label-text">Lien de l’enregistrement</span><input type="url" name="recordingUrl" value="${esc(w.recordingUrl || '')}" placeholder="https://…" /></label>
-        </div>
-        <div class="admin-form-actions">
+        <section class="admin-tab-panel is-active" data-tab-panel="session">
+          <label><span class="admin-label-text">Titre</span><input type="text" name="title" required value="${esc(w.title)}" /></label>
+          <label class="admin-form-span2"><span class="admin-label-text">Description</span><textarea name="description" rows="4" required>${esc(w.description)}</textarea></label>
+          <label><span class="admin-label-text">Tag</span><input type="text" name="tag" required value="${esc(w.tag)}" /></label>
+          <label class="admin-form-span2"><span class="admin-label-text">Publié sur le site</span><input type="checkbox" name="published" ${pubChecked} /></label>
+          <div class="admin-webinar-event-fields">
+            <label><span class="admin-label-text">Date et heure</span><input type="datetime-local" name="startsAt" required value="${esc(startsLocal)}" /></label>
+            <label><span class="admin-label-text">Lieu</span>
+              <select name="locationType" id="webinarLocationTypeEdit">
+                <option value="ONLINE" ${locOnline}>En ligne</option>
+                <option value="ONSITE" ${locOnsite}>Présentiel</option>
+              </select>
+            </label>
+            <label class="admin-webinar-field-full"><span class="admin-label-text">Lien visio (si en ligne)</span><input type="url" name="onlineLink" id="webinarOnlineLinkEdit" value="${esc(w.onlineLink || '')}" placeholder="https://zoom… ou meet…" /></label>
+            <label class="admin-webinar-field-full"><span class="admin-label-text">Lieu / salle (si présentiel)</span><input type="text" name="venue" id="webinarVenueEdit" value="${esc(w.venue || '')}" placeholder="Adresse ou salle" autocomplete="address-line1" /></label>
+            <label class="admin-webinar-field-full"><span class="admin-label-text">URL bannière (image)</span><input type="url" name="bannerUrl" value="${esc(w.bannerUrl || '')}" placeholder="https://…jpg" /></label>
+          </div>
+        </section>
+        <section class="admin-tab-panel" data-tab-panel="replay">
+          <div class="admin-webinar-replay-block">
+            <h3 class="h3">Replay (après la session)</h3>
+            <p class="muted body-sm">Une fois la vidéo prête, collez le lien public (YouTube, Drive partagé, etc.).</p>
+            <label class="admin-webinar-field-full"><span class="admin-label-text">Lien de l’enregistrement</span><input type="url" name="recordingUrl" value="${esc(w.recordingUrl || '')}" placeholder="https://…" /></label>
+          </div>
+        </section>
+        <section class="admin-tab-panel" data-tab-panel="participants">
+          <div class="admin-table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>E-mail</th>
+                  <th>Nom</th>
+                  <th>WhatsApp</th>
+                  <th>Type</th>
+                  <th>Annonces</th>
+                  <th>Date d’inscription</th>
+                </tr>
+              </thead>
+              <tbody>${rows || `<tr><td colspan="6" class="muted">Aucune inscription.</td></tr>`}</tbody>
+            </table>
+          </div>
+        </section>
+        <div class="admin-form-actions admin-form-span2">
           <button type="submit" class="btn btn-primary">Enregistrer</button>
           <button type="button" class="btn btn-secondary" id="adminEditWebinarCancel">Annuler</button>
           <button type="button" class="btn btn-secondary" id="adminEditWebinarDelete">Supprimer</button>
@@ -493,22 +561,7 @@ export async function renderAdminWebinarDetailHtml(user, webinarId) {
       <p class="muted"><a data-router href="/admin/webinars">← Liste des webinaires</a></p>
     </header>
     ${editForm}
-    <p class="body-lg">${esc(statusMeta(w).label)} — inscriptions : <strong>${regs.length}</strong></p>
-    <div class="admin-table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>E-mail</th>
-            <th>Nom</th>
-            <th>WhatsApp</th>
-            <th>Type</th>
-            <th>Annonces</th>
-            <th>Date d’inscription</th>
-          </tr>
-        </thead>
-        <tbody>${rows || `<tr><td colspan="6" class="muted">Aucune inscription.</td></tr>`}</tbody>
-      </table>
-    </div>
+    <p class="body-lg">${esc(statusMeta(w).label)} — inscriptions : <strong>${regs.length}</strong> · vues replay : <strong>${w.replayViewCount ?? 0}</strong></p>
     <p class="muted small">Parcours catalogue : <code>${esc(COURSE.slug)}</code></p>`;
 
   return wrapAdminPage('webinars', inner, user);
@@ -523,6 +576,7 @@ export function bindAdminWebinarDetailPage(ctx) {
   const locSel = document.getElementById('webinarLocationTypeEdit');
   const onlineIn = document.getElementById('webinarOnlineLinkEdit');
   const venueIn = document.getElementById('webinarVenueEdit');
+  const tabsWrap = document.getElementById('adminWebinarTabs');
 
   function syncLocation() {
     const isOnline = locSel?.value === 'ONLINE';
@@ -536,6 +590,21 @@ export function bindAdminWebinarDetailPage(ctx) {
   }
   locSel?.addEventListener('change', syncLocation);
   syncLocation();
+
+  tabsWrap?.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const tabBtn = target.closest('[data-tab-target]');
+    if (!(tabBtn instanceof HTMLElement)) return;
+    const tab = tabBtn.getAttribute('data-tab-target');
+    if (!tab) return;
+    document.querySelectorAll('.admin-tab').forEach((el) => el.classList.remove('is-active'));
+    tabBtn.classList.add('is-active');
+    document.querySelectorAll('.admin-tab-panel').forEach((el) => {
+      if (!(el instanceof HTMLElement)) return;
+      el.classList.toggle('is-active', el.getAttribute('data-tab-panel') === tab);
+    });
+  });
 
   async function showMsg(text, isErr) {
     if (!msg) return;

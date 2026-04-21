@@ -101,7 +101,9 @@ function parseAdminListQuery(req) {
   const allowed = ['', 'UPCOMING', 'PAST_NEEDS_REPLAY', 'REPLAY_READY'];
   const lifecycleOk = allowed.includes(lifecycle) ? lifecycle : '';
   const q = String(params.get('q') || '').trim().slice(0, 200);
-  return { page, pageSize, lifecycle: lifecycleOk, q };
+  const publishedRaw = String(params.get('published') || '').trim().toLowerCase();
+  const published = publishedRaw === 'true' ? true : publishedRaw === 'false' ? false : null;
+  return { page, pageSize, lifecycle: lifecycleOk, q, published };
 }
 
 /** Filtre Prisma aligné sur webinarLifecycle (serializeAdminWebinar). */
@@ -137,6 +139,13 @@ function prismaWhereSearch(q) {
   };
 }
 
+function mergeWheres(parts) {
+  const list = parts.filter((x) => x && Object.keys(x).length);
+  if (list.length === 0) return {};
+  if (list.length === 1) return list[0];
+  return { AND: list };
+}
+
 /** GET /api/admin/webinars?page=&pageSize=&lifecycle=&q= */
 export async function adminListWebinars(req, res) {
   setCors(res);
@@ -151,24 +160,18 @@ export async function adminListWebinars(req, res) {
     const auth = await requireAdmin(req);
     if (auth.error) return sendJson(res, auth.status, { error: auth.error });
 
-    const { page, pageSize, lifecycle, q } = parseAdminListQuery(req);
+    const { page, pageSize, lifecycle, q, published } = parseAdminListQuery(req);
     const now = new Date();
 
     const wl = prismaWhereLifecycle(lifecycle, now);
     const ws = prismaWhereSearch(q);
-    const where =
-      Object.keys(wl).length && Object.keys(ws).length
-        ? { AND: [wl, ws] }
-        : Object.keys(wl).length
-          ? wl
-          : Object.keys(ws).length
-            ? ws
-            : {};
+    const wp = published == null ? {} : { published };
+    const where = mergeWheres([wl, ws, wp]);
 
     const emptyRec = { OR: [{ recordingUrl: null }, { recordingUrl: '' }] };
     const replayMissingWhere = { kind: 'EVENT', startsAt: { lte: now }, ...emptyRec };
 
-    const [total, replayMissingCount, firstReplayMissing] = await Promise.all([
+    const [total, replayMissingCount, firstReplayMissing, totalWebinars, upcomingCount, replayReadyCount, replayMissingTotalCount, replayViewsAgg] = await Promise.all([
       prisma.webinar.count({ where }),
       prisma.webinar.count({ where: replayMissingWhere }),
       prisma.webinar.findFirst({
@@ -176,6 +179,11 @@ export async function adminListWebinars(req, res) {
         orderBy: { startsAt: 'asc' },
         select: { id: true },
       }),
+      prisma.webinar.count(),
+      prisma.webinar.count({ where: prismaWhereLifecycle('UPCOMING', now) }),
+      prisma.webinar.count({ where: prismaWhereLifecycle('REPLAY_READY', now) }),
+      prisma.webinar.count({ where: prismaWhereLifecycle('PAST_NEEDS_REPLAY', now) }),
+      prisma.webinarReplayView.count(),
     ]);
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
@@ -183,7 +191,7 @@ export async function adminListWebinars(req, res) {
 
     const rows = await prisma.webinar.findMany({
       where,
-      include: { _count: { select: { registrations: true } } },
+      include: { _count: { select: { registrations: true, replayViews: true } } },
       orderBy: [{ kind: 'asc' }, { startsAt: 'desc' }, { createdAt: 'desc' }],
       skip: (effectivePage - 1) * pageSize,
       take: pageSize,
@@ -192,6 +200,7 @@ export async function adminListWebinars(req, res) {
     const webinars = rows.map((w) => ({
       ...serializeAdminWebinar(w),
       registrationCount: w._count.registrations,
+      replayViewCount: w._count.replayViews,
     }));
 
     return sendJson(res, 200, {
@@ -202,6 +211,13 @@ export async function adminListWebinars(req, res) {
       totalPages,
       replayMissingCount,
       firstReplayMissingId: firstReplayMissing?.id ?? null,
+      totals: {
+        total: totalWebinars,
+        upcoming: upcomingCount,
+        replayReady: replayReadyCount,
+        replayMissing: replayMissingTotalCount,
+        replayViews: replayViewsAgg,
+      },
     });
   } catch (e) {
     console.error(e);
@@ -225,10 +241,13 @@ export async function adminGetWebinar(req, res) {
     const id = req.params?.id;
     if (!id) return sendJson(res, 400, { error: 'id manquant' });
 
-    const row = await prisma.webinar.findUnique({ where: { id } });
+    const row = await prisma.webinar.findUnique({
+      where: { id },
+      include: { _count: { select: { replayViews: true } } },
+    });
     if (!row) return sendJson(res, 404, { error: 'Webinaire introuvable' });
 
-    const webinar = serializeAdminWebinar(row);
+    const webinar = { ...serializeAdminWebinar(row), replayViewCount: row._count.replayViews };
 
     return sendJson(res, 200, { webinar });
   } catch (e) {

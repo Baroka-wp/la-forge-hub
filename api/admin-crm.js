@@ -12,7 +12,9 @@ function parseQuery(req) {
   let page = Math.max(1, parseInt(String(params.get('page') || '1'), 10) || 1);
   let pageSize = Math.min(100, Math.max(5, parseInt(String(params.get('pageSize') || '25'), 10) || 25));
   const q = String(params.get('q') || '').trim().toLowerCase().slice(0, 200);
-  return { page, pageSize, q };
+  const optInRaw = String(params.get('marketingOptIn') || '').trim().toLowerCase();
+  const marketingOptIn = optInRaw === 'true' ? true : optInRaw === 'false' ? false : null;
+  return { page, pageSize, q, marketingOptIn };
 }
 
 function stripUnsafeHtml(html) {
@@ -90,6 +92,8 @@ export async function adminCrmSendEmail(req, res) {
     const subject = String(body.subject || '').trim().slice(0, 500);
     const htmlContent = stripUnsafeHtml(body.htmlContent);
     const onlyOptIn = body.onlyOptIn === true || body.onlyOptIn === 'true';
+    const optFilterRaw = String(body.marketingOptInFilter || '').trim().toLowerCase();
+    const marketingOptInFilter = optFilterRaw === 'true' ? true : optFilterRaw === 'false' ? false : null;
     const mode = body.mode === 'selection' ? 'selection' : 'all';
     const contactIds = Array.isArray(body.contactIds) ? body.contactIds.map(String) : [];
     const searchQ = String(body.searchQuery || '')
@@ -108,7 +112,12 @@ export async function adminCrmSendEmail(req, res) {
     if (!subject) return sendJson(res, 400, { error: 'Objet requis' });
     if (!htmlContent.trim()) return sendJson(res, 400, { error: 'Message (HTML) requis' });
 
-    const whereExtra = onlyOptIn ? { marketingOptIn: true } : {};
+    const whereExtra =
+      marketingOptInFilter == null
+        ? onlyOptIn
+          ? { marketingOptIn: true }
+          : {}
+        : { marketingOptIn: marketingOptInFilter };
 
     let recipients;
     if (mode === 'selection') {
@@ -162,18 +171,24 @@ export async function adminListMarketingContacts(req, res) {
     const auth = await requireAdmin(req);
     if (auth.error) return sendJson(res, auth.status, { error: auth.error });
 
-    const { page, pageSize, q } = parseQuery(req);
-    const where = q
-      ? {
-          OR: [
-            { emailKey: { contains: q, mode: 'insensitive' } },
-            { displayName: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+    const { page, pageSize, q, marketingOptIn } = parseQuery(req);
+    const where = {
+      ...(q
+        ? {
+            OR: [
+              { emailKey: { contains: q, mode: 'insensitive' } },
+              { displayName: { contains: q, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+      ...(marketingOptIn == null ? {} : { marketingOptIn }),
+    };
 
-    const [total, rows] = await Promise.all([
+    const [total, totalContacts, optInCount, withPhoneCount, rowsAll] = await Promise.all([
       prisma.marketingContact.count({ where }),
+      prisma.marketingContact.count(),
+      prisma.marketingContact.count({ where: { marketingOptIn: true } }),
+      prisma.marketingContact.count({ where: { phone: { not: null } } }),
       prisma.marketingContact.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
@@ -184,6 +199,15 @@ export async function adminListMarketingContacts(req, res) {
 
     const totalPages = Math.max(1, Math.ceil(total / pageSize) || 1);
     const effectivePage = total === 0 ? 1 : Math.min(page, totalPages);
+    const rows =
+      effectivePage === page
+        ? rowsAll
+        : await prisma.marketingContact.findMany({
+            where,
+            orderBy: { updatedAt: 'desc' },
+            skip: (effectivePage - 1) * pageSize,
+            take: pageSize,
+          });
 
     const contacts = await Promise.all(
       rows.map(async (c) => {
@@ -231,6 +255,11 @@ export async function adminListMarketingContacts(req, res) {
       page: effectivePage,
       pageSize,
       totalPages,
+      totals: {
+        total: totalContacts,
+        optIn: optInCount,
+        withPhone: withPhoneCount,
+      },
     });
   } catch (e) {
     console.error(e);
