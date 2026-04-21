@@ -4,6 +4,7 @@ import {
   fetchWebinarById,
   fetchNextWebinarEvent,
   registerForWebinar,
+  subscribeToReplay,
   getSession,
 } from './api.js';
 
@@ -612,6 +613,21 @@ export async function renderWebinarDetailHtml(id, preloaded = null) {
 
   const hasSide = Boolean(teaserOnline || regUi || registeredPackHtml || pastReplayMsg);
 
+  const replayOptinHtml =
+    hasPublicReplay(w)
+      ? `<section class="webinar-replay-optin surface-container-low">
+          <h2 class="h3">Recevoir les prochains webinaires</h2>
+          <p class="muted body-sm">Laissez votre e-mail pour être averti·e dès qu’un nouveau webinaire ou replay est publié.</p>
+          <form id="formReplayOptin" class="webinar-replay-optin-form" data-webinar-id="${esc(w.id)}">
+            <label class="webinar-replay-optin-label"><span class="admin-label-text">E-mail</span><input type="email" name="email" required autocomplete="email" placeholder="vous@exemple.com" /></label>
+            <label class="webinar-replay-optin-label"><span class="admin-label-text">Prénom (facultatif)</span><input type="text" name="fullName" autocomplete="name" placeholder="Votre prénom" /></label>
+            <button type="submit" class="btn btn-secondary">Recevoir les alertes</button>
+            <p id="replayOptinMsg" class="form-error admin-msg" role="status"></p>
+            <p class="muted small">En soumettant ce formulaire, vous acceptez de recevoir les annonces de La Forge Hub. Vous pourrez vous désabonner à tout moment.</p>
+          </form>
+        </section>`
+      : '';
+
   const replaysRail = `
     <aside class="webinar-detail-replays-rail surface-container-low" aria-label="Autres replays">
       <h2 class="webinar-replays-rail-heading">Autres replays</h2>
@@ -649,6 +665,7 @@ export async function renderWebinarDetailHtml(id, preloaded = null) {
     }
           <div class="webinar-detail-main">
             <div class="webinar-detail-desc body-lg"><p>${esc(w.description).replace(/\n/g, '<br/>')}</p></div>
+            ${replayOptinHtml}
           </div>
         </div>
       </article>
@@ -716,6 +733,34 @@ export function bindWebinarDetailPage() {
       }
       writeGuestWebinarRegistration(wid, email);
       window.location.reload();
+    });
+  }
+
+  const replayForm = document.getElementById('formReplayOptin');
+  if (replayForm) {
+    const wid = replayForm.getAttribute('data-webinar-id');
+    const msg = document.getElementById('replayOptinMsg');
+    const submitBtn = replayForm.querySelector('button[type="submit"]');
+    replayForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!wid) return;
+      const fd = new FormData(replayForm);
+      const email = String(fd.get('email') || '').trim();
+      const fullName = String(fd.get('fullName') || '').trim();
+      if (!email) {
+        if (msg) msg.textContent = 'Indiquez votre e-mail.';
+        return;
+      }
+      if (msg) msg.textContent = '';
+      submitBtn?.setAttribute('disabled', 'true');
+      const r = await subscribeToReplay(wid, { email, fullName });
+      submitBtn?.removeAttribute('disabled');
+      if (!r.ok) {
+        if (msg) msg.textContent = r.error || "Erreur lors de l'envoi.";
+        return;
+      }
+      replayForm.reset();
+      if (msg) msg.textContent = 'Merci ! Vous serez informé·e des prochains webinaires.';
     });
   }
 
