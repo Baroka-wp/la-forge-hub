@@ -65,6 +65,7 @@ import {
   getDashboardWebinarBannerHtml,
   bindDashboardWebinarBanner,
   bindWebinarDetailPage,
+  bindWebinarsListPage,
 } from './webinars-ui.js';
 import { pushLoading, popLoading, withLoading } from './loader.js';
 import { renderCguPageHtml } from './legal-cgu.js';
@@ -253,8 +254,8 @@ function shell(content, opts = {}) {
           <span class="brand-text">${escapeHtml(PLATFORM_BRAND)}</span>
         </a>
         <nav class="nav-main nav-main--desktop" aria-label="Navigation principale">
-          <a data-router href="/course/${COURSE.slug}">Formation IA</a>
-          <a data-router href="/webinars">Webinaires</a>
+          <a data-router href="/webinars" class="nav-main-primary">Formations Pro</a>
+          <a data-router href="/course/${COURSE.slug}" class="nav-main-secondary">Formation IA</a>
         </nav>
         ${
           user
@@ -279,18 +280,33 @@ function shell(content, opts = {}) {
         <h2 id="navDrawerTitle" class="nav-drawer-title">Menu de navigation</h2>
         <button type="button" class="nav-drawer-close" id="navDrawerClose" aria-label="Fermer le menu">×</button>
         <nav class="nav-drawer-links" aria-label="Navigation principale">
+          <a data-router href="/webinars">Formations Pro</a>
           <a data-router href="/course/${COURSE.slug}">Formation IA</a>
-          <a data-router href="/webinars">Webinaires</a>
         </nav>
         ${drawerAccountBlock}
       </div>
     </div>
     <main class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
     <footer class="site-footer">
-      <p><strong>${escapeHtml(PLATFORM_BRAND)}</strong> — ${escapeHtml(COURSE.title)} · ${escapeHtml(COURSE.subtitle)}</p>
-      <p class="site-footer-links">
-        <a data-router href="/cgu">Conditions générales d’utilisation</a>
-      </p>
+      <div class="site-footer-cols">
+        <div class="site-footer-col">
+          <p class="site-footer-brand"><strong>${escapeHtml(PLATFORM_BRAND)}</strong></p>
+          <p class="site-footer-tagline">Formations Pro &amp; conférences pour les passionnés de tech.</p>
+        </div>
+        <div class="site-footer-col">
+          <p class="site-footer-col-title">Formations Pro</p>
+          <a data-router href="/webinars">Toutes les sessions</a>
+          <a data-router href="/webinars#replays">Replays</a>
+        </div>
+        <div class="site-footer-col">
+          <p class="site-footer-col-title">Formations</p>
+          <a data-router href="/course/${COURSE.slug}">Parcours ${escapeHtml(COURSE.title)}</a>
+        </div>
+        <div class="site-footer-col">
+          <p class="site-footer-col-title">Légal</p>
+          <a data-router href="/cgu">Conditions générales d’utilisation</a>
+        </div>
+      </div>
     </footer>
   `;
 }
@@ -387,10 +403,11 @@ async function render() {
 
     if (route.name === 'home') {
       app.innerHTML = shell(await renderHome(), {
-        landing: true,
-        title: `${PLATFORM_BRAND} — Formation IA & webinaires`,
+        title: `${PLATFORM_BRAND} — Formations Pro & conférences tech`,
         description: DEFAULT_SITE_DESCRIPTION,
       });
+      bindHomeCountdown();
+      bindHomeOptinForm();
     } else if (route.name === 'login') {
       app.innerHTML = shell(renderAuth('login'), {
         title: `Connexion — ${PLATFORM_BRAND}`,
@@ -427,9 +444,10 @@ async function render() {
       await bindLearnPage(route.lessonId);
     } else if (route.name === 'webinars') {
       app.innerHTML = shell(await renderWebinarsPageHtml(), {
-        title: `Webinaires — ${PLATFORM_BRAND}`,
-        description: `Webinaires et replays ${PLATFORM_BRAND} : sessions en direct, inscriptions et visionnage des enregistrements.`,
+        title: `Formations Pro — ${PLATFORM_BRAND}`,
+        description: `Formations Professionnelles ${PLATFORM_BRAND} : sessions en direct, inscriptions et visionnage des replays.`,
       });
+      bindWebinarsListPage();
   } else if (route.name === 'webinar-detail' && route.id) {
     if (route.id === 'next') {
       const next = await fetchNextWebinarEvent();
@@ -439,18 +457,18 @@ async function render() {
       }
       app.innerHTML = shell(
         `<section class="panel surface-card">
-          <h1 class="h1">Aucun webinaire à venir</h1>
+          <h1 class="h1">Aucune session à venir</h1>
           <p class="muted">Il n’y a pas de session à venir pour l’instant.</p>
-          <a data-router class="btn btn-primary" href="/webinars">Liste des webinaires</a>
+          <a data-router class="btn btn-primary" href="/webinars">Voir les formations Pro</a>
         </section>`,
         {
-          title: `Webinaires — ${PLATFORM_BRAND}`,
-          description: `Aucune session à venir pour l’instant. Consultez la liste des webinaires et replays sur ${PLATFORM_BRAND}.`,
+          title: `Formations Pro — ${PLATFORM_BRAND}`,
+          description: `Aucune session à venir pour l’instant. Consultez la liste des formations Pro et replays sur ${PLATFORM_BRAND}.`,
         },
       );
       return;
     }
-    let webinarShell = { title: `Webinaire — ${PLATFORM_BRAND}`, description: undefined, image: undefined };
+    let webinarShell = { title: `Formation Pro — ${PLATFORM_BRAND}`, description: undefined, image: undefined };
     let webinarPreloaded = null;
     if (backendMode() === 'neon') {
       const guestEmail = readGuestWebinarRegisteredEmail(route.id) || '';
@@ -462,7 +480,7 @@ async function render() {
       if (r.ok && r.webinar) {
         const w = r.webinar;
         webinarShell = {
-          title: `${w.title} — Webinaire`,
+          title: `${w.title} — Formation Pro`,
           description: truncateMetaDescription(`${w.title}. ${w.description || ''}`),
           image: w.bannerUrl && String(w.bannerUrl).trim() ? String(w.bannerUrl).trim() : undefined,
         };
@@ -631,51 +649,274 @@ function initCourseVideoCatalog(els) {
   doRender('all');
 }
 
-async function renderHome() {
-  const enrolled = currentUser ? await isEnrolled(currentUser.id) : false;
-  const progress = currentUser ? await getProgressMap(currentUser.id) : {};
-  const lastIncomplete = sessions.find((s) => !progress[s.lessonId]?.completed);
-  const firstLessonId = sessions[0]?.lessonId;
-  const continueHref =
-    enrolled && lastIncomplete
-      ? `/learn/${COURSE.slug}/${encodeURIComponent(lastIncomplete.lessonId)}`
-      : enrolled && firstLessonId
-        ? `/learn/${COURSE.slug}/${encodeURIComponent(firstLessonId)}`
-        : `/course/${COURSE.slug}`;
+function formatWebinarDateLong(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
 
-  const homeTitle = 'La Forge Hub';
-  const homeLead =
-    'La Forge Hub propose une formation en intelligence artificielle et des webinaires pour développer vos soft skills — tout au même endroit.';
+function renderHomeWebinarCard(w, variant = 'event') {
+  const date = w.startsAt ? formatWebinarDateLong(w.startsAt) : '';
+  const tag = w.tag ? `<span class="home-card-tag">${escapeHtml(w.tag)}</span>` : '';
+  const meta = variant === 'replay'
+    ? `<span class="home-card-meta">Replay disponible</span>`
+    : date
+      ? `<span class="home-card-meta">${escapeHtml(date)}</span>`
+      : '';
+  return `
+    <a data-router href="/webinars/${escapeHtml(w.id)}" class="home-card">
+      <div class="home-card-head">
+        ${tag}
+        ${meta}
+      </div>
+      <h3 class="home-card-title">${escapeHtml(w.title || '')}</h3>
+      <p class="home-card-desc">${escapeHtml((w.description || '').slice(0, 140))}${(w.description || '').length > 140 ? '…' : ''}</p>
+    </a>`;
+}
 
-  const homePoints = [
-    'Parcours vidéo structuré : Python, données, machine learning et deep learning',
-    'Webinaires et replays sur l’IA et le développement des soft skills',
-  ];
+function renderHomeHero({ webinar, mode }) {
+  /** mode = 'upcoming' | 'replay-fallback' */
+  if (!webinar) {
+    return `
+      <section class="home-hero home-hero--empty">
+        <div class="home-hero-inner">
+          <p class="home-hero-eyebrow">${escapeHtml(PLATFORM_BRAND)}</p>
+          <h1 class="h1 home-hero-title">Formations Pro, en direct et en replay.</h1>
+          <p class="home-hero-lead">Aucune session programmée pour l’instant. Inscrivez-vous pour être prévenu·e de la prochaine.</p>
+          <div class="home-hero-cta">
+            <a data-router class="btn btn-primary btn-lg" href="/webinars">Explorer les replays</a>
+          </div>
+        </div>
+      </section>`;
+  }
 
-  const ctaBlock = !currentUser
-    ? `<div class="landing-cta">
-        <a data-router class="btn btn-primary btn-lg" href="/course/${COURSE.slug}">Voir le catalogue Formation IA</a>
-        <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir les webinaires</a>
+  const isReplay = mode === 'replay-fallback';
+  const eyebrow = isReplay ? 'Replay à la une' : 'Prochain rendez-vous';
+  const date = webinar.startsAt ? formatWebinarDateLong(webinar.startsAt) : '';
+  const countdown = !isReplay && webinar.startsAt
+    ? `<div class="home-hero-countdown" data-countdown-target="${escapeHtml(webinar.startsAt)}" aria-live="polite">
+        <div class="home-hero-countdown-cell"><span data-cd="d">--</span><small>jours</small></div>
+        <div class="home-hero-countdown-cell"><span data-cd="h">--</span><small>heures</small></div>
+        <div class="home-hero-countdown-cell"><span data-cd="m">--</span><small>min</small></div>
+        <div class="home-hero-countdown-cell"><span data-cd="s">--</span><small>sec</small></div>
       </div>`
-    : enrolled
-      ? `<div class="landing-cta">
-        <a data-router class="btn btn-primary btn-lg" href="${continueHref}">Continuer le parcours</a>
-        <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir les webinaires</a>
-      </div>`
-      : `<div class="landing-cta">
-        <a data-router class="btn btn-primary btn-lg" href="/course/${COURSE.slug}">Voir le parcours et s’inscrire</a>
-        <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir les webinaires</a>
-      </div>`;
+    : '';
+  const cta = isReplay
+    ? `<a data-router class="btn btn-primary btn-lg" href="/webinars/${escapeHtml(webinar.id)}">Regarder le replay</a>
+       <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir tous les replays</a>`
+    : `<a data-router class="btn btn-primary btn-lg" href="/webinars/${escapeHtml(webinar.id)}">Réserver ma place</a>
+       <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir toutes les formations Pro</a>`;
+  const tag = webinar.tag ? `<span class="home-hero-tag">${escapeHtml(webinar.tag)}</span>` : '';
+  const dateLine = date ? `<p class="home-hero-date">${escapeHtml(date)}</p>` : '';
 
   return `
-    <div class="landing-page home-landing">
-      ${renderLandingHeroHtml({
-        title: homeTitle,
-        lead: homeLead,
-        points: homePoints,
-        ctaBlock,
-      })}
+    <section class="home-hero">
+      <div class="home-hero-inner">
+        <p class="home-hero-eyebrow">${escapeHtml(eyebrow)}</p>
+        <div class="home-hero-meta">${tag}${dateLine}</div>
+        <h1 class="h1 home-hero-title">${escapeHtml(webinar.title || '')}</h1>
+        <p class="home-hero-lead">${escapeHtml((webinar.description || '').slice(0, 200))}${(webinar.description || '').length > 200 ? '…' : ''}</p>
+        ${countdown}
+        <div class="home-hero-cta">${cta}</div>
+      </div>
+    </section>`;
+}
+
+function bindHomeCountdown() {
+  const root = document.querySelector('[data-countdown-target]');
+  if (!root) return;
+  const target = new Date(root.getAttribute('data-countdown-target')).getTime();
+  if (Number.isNaN(target)) return;
+  const cells = {
+    d: root.querySelector('[data-cd="d"]'),
+    h: root.querySelector('[data-cd="h"]'),
+    m: root.querySelector('[data-cd="m"]'),
+    s: root.querySelector('[data-cd="s"]'),
+  };
+  const tick = () => {
+    const diff = target - Date.now();
+    if (diff <= 0) {
+      cells.d.textContent = '0';
+      cells.h.textContent = '00';
+      cells.m.textContent = '00';
+      cells.s.textContent = '00';
+      clearInterval(timer);
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    cells.d.textContent = String(d);
+    cells.h.textContent = String(h).padStart(2, '0');
+    cells.m.textContent = String(m).padStart(2, '0');
+    cells.s.textContent = String(s).padStart(2, '0');
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
+}
+
+async function renderHome() {
+  const nextRes = await fetchNextWebinarEvent().catch(() => null);
+  const next = nextRes?.webinar || null;
+  const allRes = await fetchWebinars().catch(() => null);
+  const all = Array.isArray(allRes?.webinars) ? allRes.webinars : [];
+  const now = Date.now();
+
+  const upcoming = all
+    .filter((w) => w.lifecycle === 'UPCOMING' && (!next || w.id !== next.id))
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
+    .slice(0, 3);
+
+  const replays = all
+    .filter((w) => w.lifecycle === 'REPLAY_READY')
+    .sort((a, b) => {
+      const ra = a.replayViewCount ?? 0;
+      const rb = b.replayViewCount ?? 0;
+      if (rb !== ra) return rb - ra;
+      const da = a.startsAt ? new Date(a.startsAt).getTime() : 0;
+      const db = b.startsAt ? new Date(b.startsAt).getTime() : 0;
+      return db - da;
+    })
+    .slice(0, 4);
+
+  const heroWebinar = next || replays[0] || null;
+  const heroMode = next ? 'upcoming' : 'replay-fallback';
+
+  const upcomingSection = upcoming.length
+    ? `<section class="home-section">
+        <div class="home-section-head">
+          <h2 class="h2">Prochains rendez-vous</h2>
+          <a data-router href="/webinars" class="home-section-link">Tout voir →</a>
+        </div>
+        <div class="home-cards home-cards--3">
+          ${upcoming.map((w) => renderHomeWebinarCard(w, 'event')).join('')}
+        </div>
+      </section>`
+    : '';
+
+  const replaysSection = replays.length
+    ? `<section class="home-section">
+        <div class="home-section-head">
+          <h2 class="h2">Replays populaires</h2>
+          <a data-router href="/webinars#replays" class="home-section-link">Tout voir →</a>
+        </div>
+        <div class="home-cards home-cards--4">
+          ${replays.map((w) => renderHomeWebinarCard(w, 'replay')).join('')}
+        </div>
+      </section>`
+    : '';
+
+  const optinSection = `
+    <section class="home-optin" id="alertes">
+      <div class="home-optin-inner">
+        <p class="home-optin-eyebrow">Restez prévenu</p>
+        <h2 class="h2 home-optin-title">Ne ratez aucune prochaine formation</h2>
+        <p class="home-optin-lead">Recevez un e-mail à chaque nouvelle formation Pro ou conférence programmée. Pas de spam, juste les annonces.</p>
+        <form id="homeOptinForm" class="home-optin-form" novalidate>
+          <div class="home-optin-row">
+            <input type="text" name="firstName" placeholder="Prénom" autocomplete="given-name" required />
+            <input type="text" name="lastName" placeholder="Nom" autocomplete="family-name" required />
+          </div>
+          <div class="home-optin-row">
+            <input type="email" name="email" placeholder="votre@email.com" autocomplete="email" required />
+            <button type="submit" class="btn btn-primary">Je m'inscris</button>
+          </div>
+          <p id="homeOptinMsg" class="home-optin-msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>`;
+
+  const aboutSection = `
+    <section class="home-about">
+      <div class="home-about-inner">
+        <div class="home-about-photo">
+          <img src="/baroka.jpg" alt="IROTORI Baroka" loading="lazy" onerror="this.style.display='none'" />
+        </div>
+        <div class="home-about-text">
+          <p class="home-about-eyebrow">Qui suis-je</p>
+          <h2 class="h2 home-about-title">IROTORI Baroka</h2>
+          <p class="home-about-lead">Créateur de La Forge Hub, ingénieur et formateur passionné de tech &amp; d’IA. Je conçois et anime ces formations pour transmettre ce que j’ai appris sur le terrain — code, architecture, intelligence artificielle, soft skills — et vous aider à monter en compétences concrètement.</p>
+          <div class="home-about-cta">
+            <a href="https://irotoribaroka.com/" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Découvrir mon parcours et mes expériences ↗</a>
+          </div>
+        </div>
+      </div>
+    </section>`;
+
+  return `
+    <div class="home-webinars">
+      ${renderHomeHero({ webinar: heroWebinar, mode: heroMode })}
+      ${upcomingSection}
+      ${optinSection}
+      ${replaysSection}
+      ${aboutSection}
     </div>`;
+}
+
+function bindHomeOptinForm() {
+  const form = document.getElementById('homeOptinForm');
+  if (!form) return;
+  const msg = document.getElementById('homeOptinMsg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msg) {
+      msg.textContent = '';
+      msg.classList.remove('is-error', 'is-success');
+    }
+    const fd = new FormData(form);
+    const payload = {
+      firstName: String(fd.get('firstName') || '').trim(),
+      lastName: String(fd.get('lastName') || '').trim(),
+      email: String(fd.get('email') || '').trim(),
+    };
+    if (!payload.email || !payload.email.includes('@')) {
+      if (msg) {
+        msg.textContent = 'E-mail invalide.';
+        msg.classList.add('is-error');
+      }
+      return;
+    }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch('/api/newsletter/optin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (msg) {
+          msg.textContent = data.error || 'Une erreur est survenue.';
+          msg.classList.add('is-error');
+        }
+        return;
+      }
+      form.reset();
+      if (msg) {
+        msg.textContent = 'Inscription confirmée. À très vite !';
+        msg.classList.add('is-success');
+      }
+    } catch (err) {
+      if (msg) {
+        msg.textContent = 'Connexion impossible. Réessayez.';
+        msg.classList.add('is-error');
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 }
 
 function renderAuth(mode) {

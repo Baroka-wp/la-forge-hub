@@ -352,10 +352,10 @@ export async function renderWebinarsPageHtml() {
   if (!neon) {
     return `
       <section class="panel surface-card">
-        <h1 class="h1">Webinaires</h1>
+        <h1 class="h1">Formations Professionnelles</h1>
         <div class="webinar-neon-required" role="status">
-          <p><strong>Mode navigateur seul</strong> : la liste « magazine », les replays et l’admin webinaires passent par l’API.</p>
-          <p class="muted">Dans <code>.env</code>, mettez <code>VITE_USE_NEON_API=true</code>, puis <strong>redémarrez</strong> <code>npm run dev</code> (Vite ne recharge pas toujours les variables d’environnement à chaud).</p>
+          <p><strong>Mode navigateur seul</strong> : la liste, les replays et l’admin passent par l’API.</p>
+          <p class="muted">Dans <code>.env</code>, mettez <code>VITE_USE_NEON_API=true</code>, puis <strong>redémarrez</strong> <code>npm run dev</code>.</p>
         </div>
       </section>`;
   }
@@ -364,7 +364,7 @@ export async function renderWebinarsPageHtml() {
   if (!all.ok) {
     return `
       <section class="panel surface-card">
-        <h1 class="h1">Webinaires</h1>
+        <h1 class="h1">Formations Professionnelles</h1>
         <p class="form-error">${esc(all.error || 'Erreur de chargement')}</p>
       </section>`;
   }
@@ -373,8 +373,9 @@ export async function renderWebinarsPageHtml() {
   const archives = all.webinars.filter((w) => hasPublicReplay(w));
 
   const card = (w) => {
-    const meta = hasPublicReplay(w)
-      ? 'Replay'
+    const isReplay = hasPublicReplay(w);
+    const meta = isReplay
+      ? 'Replay disponible'
       : w.kind === 'EVENT' && w.startsAt
         ? new Date(w.startsAt).toLocaleString('fr-FR', {
           day: 'numeric',
@@ -384,11 +385,13 @@ export async function renderWebinarsPageHtml() {
           minute: '2-digit',
         })
         : '';
+    const cta = isReplay ? 'Regarder le replay' : 'Voir & s’inscrire';
     const thumb = w.bannerUrl
       ? `<div class="webinar-card-thumb"><img src="${esc(w.bannerUrl)}" alt="" loading="lazy" /></div>`
       : `<div class="webinar-card-thumb webinar-card-thumb--placeholder"></div>`;
+    const haystack = `${w.title || ''} ${w.tag || ''} ${w.description || ''}`.toLowerCase();
     return `
-      <article class="webinar-card surface-container-low ${hasPublicReplay(w) ? 'is-replay' : 'is-upcoming'}">
+      <article class="webinar-card surface-container-low ${isReplay ? 'is-replay' : 'is-upcoming'}" data-section="${isReplay ? 'replays' : 'upcoming'}" data-haystack="${esc(haystack)}">
         <a data-router href="/webinars/${esc(w.id)}" class="webinar-card-link">
           ${thumb}
           <div class="webinar-card-body">
@@ -396,61 +399,190 @@ export async function renderWebinarsPageHtml() {
             <h2 class="webinar-card-title">${esc(w.title)}</h2>
             <p class="muted webinar-card-desc">${esc(w.description).slice(0, 140)}${w.description.length > 140 ? '…' : ''}</p>
             <span class="webinar-card-meta">${esc(meta)}</span>
+            <span class="webinar-card-cta">${cta} →</span>
           </div>
         </a>
       </article>`;
   };
 
-  const hero = upcoming[0];
-  const heroWhen = hero?.startsAt
-    ? new Date(hero.startsAt).toLocaleString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    : '';
-  const heroMedia = hero?.bannerUrl
-    ? `<img src="${esc(hero.bannerUrl)}" alt="" loading="lazy" />`
-    : '<div class="webinar-hero-placeholder"></div>';
+  const filtersBar = `
+    <div class="wb-filters" role="toolbar" aria-label="Filtres formations">
+      <div class="wb-filters-tabs" role="tablist">
+        <button type="button" class="wb-filter-tab is-active" data-filter="all" role="tab" aria-selected="true">Tout</button>
+        <button type="button" class="wb-filter-tab" data-filter="upcoming" role="tab" aria-selected="false">À venir <span class="wb-filter-count">${upcoming.length}</span></button>
+        <button type="button" class="wb-filter-tab" data-filter="replays" role="tab" aria-selected="false">Replays <span class="wb-filter-count">${archives.length}</span></button>
+      </div>
+      <label class="wb-search">
+        <span class="wb-search-icon" aria-hidden="true">🔎</span>
+        <input type="search" id="wbSearchInput" placeholder="Rechercher une formation, un tag…" aria-label="Rechercher" />
+      </label>
+    </div>`;
+
+  const upcomingBlock = `
+    <section class="wb-section" data-section-block="upcoming">
+      <div class="wb-section-head">
+        <h2 class="h2 section-title">Prochaines sessions</h2>
+        <p class="muted">Réservez votre place avant qu’il n’y ait plus d’élus.</p>
+      </div>
+      <div class="webinar-grid">
+        ${upcoming.length ? upcoming.map(card).join('') : '<p class="muted wb-empty">Aucune session programmée pour l’instant.</p>'}
+      </div>
+    </section>`;
+
+  const optinBlock = `
+    <section class="wb-optin" id="wb-alerts">
+      <div class="wb-optin-inner">
+        <p class="wb-optin-eyebrow">Restez prévenu·e</p>
+        <h2 class="h2 wb-optin-title">Ne ratez aucune prochaine formation</h2>
+        <p class="wb-optin-lead">Recevez un e-mail dès qu’une nouvelle session ou conférence est annoncée. Pas de spam.</p>
+        <form id="wbOptinForm" class="wb-optin-form" novalidate>
+          <div class="wb-optin-row">
+            <input type="text" name="firstName" placeholder="Prénom" autocomplete="given-name" required />
+            <input type="text" name="lastName" placeholder="Nom" autocomplete="family-name" required />
+          </div>
+          <div class="wb-optin-row">
+            <input type="email" name="email" placeholder="votre@email.com" autocomplete="email" required />
+            <button type="submit" class="btn btn-primary">Je m’inscris aux alertes</button>
+          </div>
+          <p id="wbOptinMsg" class="wb-optin-msg" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>`;
+
+  const replaysBlock = `
+    <section class="wb-section" data-section-block="replays">
+      <div class="wb-section-head">
+        <h2 class="h2 section-title">Replays disponibles</h2>
+        <p class="muted">Rattrapez à votre rythme les formations passées.</p>
+      </div>
+      <div class="webinar-grid">
+        ${archives.length ? archives.map(card).join('') : '<p class="muted wb-empty">Aucun replay publié pour l’instant.</p>'}
+      </div>
+    </section>`;
 
   return `
     <div class="webinars-page-layout">
       <section class="webinars-page webinar-editorial panel surface-card">
         <header class="webinar-editorial-head">
-          <p class="eyebrow">Edition webinaires</p>
-          <h1 class="h1">Webinaires</h1>
-          <p class="muted body-lg">Sessions a venir et replays de formation, presentes dans un format editorial clair.</p>
+          <p class="eyebrow">Formations Pro</p>
         </header>
-
-        ${hero
-      ? `<article class="webinar-hero surface-container-low">
-              <a data-router href="/webinars/${esc(hero.id)}" class="webinar-hero-media">${heroMedia}</a>
-              <div class="webinar-hero-body">
-                <p class="webinar-hero-kicker">A venir</p>
-                <h2 class="h2"><a data-router href="/webinars/${esc(hero.id)}">${esc(hero.title)}</a></h2>
-                <p class="muted webinar-hero-meta">${esc(heroWhen)} · ${locLabel(hero.locationType, hero.venue)}</p>
-                <p class="body-md">${esc(hero.description).slice(0, 260)}${hero.description.length > 260 ? '…' : ''}</p>
-                <div class="webinar-hero-actions">
-                  <a data-router class="btn btn-primary" href="/webinars/${esc(hero.id)}">Voir le programme</a>
-                </div>
-              </div>
-            </article>`
-      : ''
-    }
-
-        <h2 class="h2 section-title">A venir</h2>
-        <div class="webinar-grid">
-          ${upcoming.length ? upcoming.map(card).join('') : '<p class="muted">Aucun webinaire a venir pour l’instant.</p>'}
-        </div>
-
-        <h2 class="h2 section-title">Replays</h2>
-        <div class="webinar-grid">
-          ${archives.length ? archives.map(card).join('') : '<p class="muted">Aucun replay publie pour l’instant.</p>'}
-        </div>
+        ${filtersBar}
+        ${upcomingBlock}
+        ${optinBlock}
+        ${replaysBlock}
+        <p class="wb-no-results muted" hidden>Aucun résultat ne correspond à votre recherche.</p>
       </section>
     </div>`;
+}
+
+export function bindWebinarsListPage() {
+  const tabs = document.querySelectorAll('.wb-filter-tab');
+  const search = document.getElementById('wbSearchInput');
+  const cards = Array.from(document.querySelectorAll('.webinar-card[data-section]'));
+  const sections = Array.from(document.querySelectorAll('[data-section-block]'));
+  const noResults = document.querySelector('.wb-no-results');
+  let activeFilter = 'all';
+  let query = '';
+
+  function applyFilters() {
+    let visibleCount = 0;
+    const sectionVisible = { upcoming: 0, replays: 0 };
+    for (const card of cards) {
+      const section = card.getAttribute('data-section');
+      const haystack = card.getAttribute('data-haystack') || '';
+      const matchesFilter = activeFilter === 'all' || activeFilter === section;
+      const matchesQuery = !query || haystack.includes(query);
+      const show = matchesFilter && matchesQuery;
+      card.style.display = show ? '' : 'none';
+      if (show) {
+        visibleCount++;
+        sectionVisible[section]++;
+      }
+    }
+    for (const block of sections) {
+      const section = block.getAttribute('data-section-block');
+      const hidden = activeFilter !== 'all' && activeFilter !== section;
+      block.style.display = hidden ? 'none' : '';
+    }
+    if (noResults) noResults.hidden = visibleCount > 0;
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      tabs.forEach((t) => {
+        t.classList.remove('is-active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      tab.classList.add('is-active');
+      tab.setAttribute('aria-selected', 'true');
+      activeFilter = tab.getAttribute('data-filter') || 'all';
+      applyFilters();
+    });
+  });
+
+  if (search) {
+    search.addEventListener('input', () => {
+      query = search.value.trim().toLowerCase();
+      applyFilters();
+    });
+  }
+
+  bindWbOptinForm();
+}
+
+function bindWbOptinForm() {
+  const form = document.getElementById('wbOptinForm');
+  if (!form) return;
+  const msg = document.getElementById('wbOptinMsg');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msg) {
+      msg.textContent = '';
+      msg.classList.remove('is-error', 'is-success');
+    }
+    const fd = new FormData(form);
+    const payload = {
+      firstName: String(fd.get('firstName') || '').trim(),
+      lastName: String(fd.get('lastName') || '').trim(),
+      email: String(fd.get('email') || '').trim(),
+    };
+    if (!payload.email || !payload.email.includes('@')) {
+      if (msg) {
+        msg.textContent = 'E-mail invalide.';
+        msg.classList.add('is-error');
+      }
+      return;
+    }
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = true;
+    try {
+      const r = await fetch('/api/newsletter/optin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (msg) {
+          msg.textContent = data.error || 'Une erreur est survenue.';
+          msg.classList.add('is-error');
+        }
+        return;
+      }
+      form.reset();
+      if (msg) {
+        msg.textContent = 'Inscription confirmée. À très vite !';
+        msg.classList.add('is-success');
+      }
+    } catch {
+      if (msg) {
+        msg.textContent = 'Connexion impossible. Réessayez.';
+        msg.classList.add('is-error');
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
 }
 
 function replayRailItemHtml(x) {

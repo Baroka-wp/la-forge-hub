@@ -16,6 +16,7 @@ import { overview, listUsers, getUserDetail, patchUser } from '../api/admin-user
 import { listWebinars, getNextWebinar, getWebinarById } from '../api/webinars-public.js';
 import { registerToWebinar } from '../api/webinars-register.js';
 import { replayOptin } from '../api/webinars-replay-optin.js';
+import { newsletterOptin } from '../api/newsletter-optin.js';
 import { trackReplayView } from '../api/webinars-replay-view.js';
 import {
   adminListWebinars,
@@ -82,4 +83,5 @@ export function registerApiRoutes(app) {
   app.post('/api/webinars/:id/register', (req, res) => registerToWebinar(req, res));
   app.post('/api/webinars/:id/replay-view', (req, res) => trackReplayView(req, res));
   app.post('/api/webinars/replay-optin', (req, res) => replayOptin(req, res));
+  app.post('/api/newsletter/optin', (req, res) => newsletterOptin(req, res));
 }

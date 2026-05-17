@@ -21,6 +21,11 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
   },
+  server: {
+    allowedHosts: [
+      '0cfe-2605-59c0-1c55-b408-b119-70ac-989d-45d6.ngrok-free.app',
+    ],
+  },
   plugins: [
     {
       name: 'api-routes-dev',
