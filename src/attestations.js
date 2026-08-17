@@ -87,14 +87,14 @@ function formHtml(prefill = {}) {
         <label class="noai-field">
           <span>Numéro de table</span>
           <input type="text" name="tableNumber" inputmode="text" autocomplete="off"
-            placeholder="NOAI_26_042" value="${escapeHtml(prefill.tableNumber || '')}" required />
+            placeholder="Ex. NOAI_26_XXX" value="${escapeHtml(prefill.tableNumber || '')}" required />
           <small>Figure sur votre convocation et sur votre poste le jour de la compétition.</small>
         </label>
 
         <label class="noai-field">
           <span>Nom et prénom(s)</span>
           <input type="text" name="fullName" autocomplete="name"
-            placeholder="DOSSOU Tchègun Exaucé" value="${escapeHtml(prefill.fullName || '')}" required />
+            placeholder="Votre nom complet" value="${escapeHtml(prefill.fullName || '')}" required />
         </label>
 
         <label class="noai-field">
