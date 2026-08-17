@@ -60,3 +60,49 @@ Cela déclenche un redeploy via l’API `POST /api/v1/applications/:id/deploy`.
 - Garder la liste des clés automation courte et les stocker dans un coffre (1Password / Doppler).
 - Régénérer une clé si elle est compromise (redémarrage nécessaire pour purger l’ancienne valeur).
 - Les clés ne contournent que les routes admin (`requireAdmin`), le front public reste inchangé.
+
+## Attestations NOAI 2026 (page `/attestations`)
+
+Page publique non listée dans le menu, accessible par lien direct. Elle permet aux
+participants des Olympiades Nationales d'Intelligence Artificielle 2026 de récupérer
+leur attestation, et aux lauréats du bootcamp de récupérer la seconde.
+
+Mise en service, dans l'ordre :
+
+```bash
+npm run db:migrate                  # crée participants / certificates / logs
+npm run db:seed:attestations        # charge les 149 participants et leurs 169 attestations
+npm run db:import:attestations -- --kind NOAI \
+  --pdf data/attestations/noai/pdf --preview data/attestations/noai/preview
+npm run db:import:attestations -- --kind BOOTCAMP \
+  --pdf data/attestations/bootcamp/pdf --preview data/attestations/bootcamp/preview
+```
+
+La liste officielle vit dans `data/participants-noai-2026.js` et fait foi. Les PDF ne
+sont pas versionnés (`data/attestations/` est ignoré) : ils sont stockés en base, servis
+uniquement via un jeton signé de 30 minutes délivré après vérification du numéro de table
+et du nom. Les deux scripts sont idempotents et ne remettent jamais à zéro les compteurs.
+
+Chaque demande validée met à jour la fiche du participant (e-mail, téléphone, nom saisi,
+nombre de demandes, première et dernière demande). Suivi des relances :
+
+```sql
+SELECT table_number, last_name, first_name, email, phone, last_request_at
+FROM participants WHERE request_count = 0 ORDER BY table_number;
+```
+
+Statistiques de téléchargement :
+
+```sql
+SELECT p.table_number, p.last_name, c.kind, c.download_count
+FROM certificates c JOIN participants p ON p.id = c.participant_id
+ORDER BY c.download_count DESC;
+```
+
+Les demandes en échec (numéro inconnu, nom qui ne correspond pas) sont conservées dans
+`certificate_requests` pour le support ; l'adresse d'assistance affichée est
+birotori@gmail.com.
+
+La recherche est limitée à cinq tentatives par adresse réseau sur dix minutes. Seule une
+empreinte HMAC anonyme est stockée dans `certificate_rate_limits`. Elle utilise
+`RATE_LIMIT_SECRET` si cette variable est définie, sinon le `JWT_SECRET` existant.

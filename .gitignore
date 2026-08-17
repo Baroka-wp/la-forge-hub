@@ -3,3 +3,6 @@ dist
 .env
 .env.local
 .DS_Store
+
+# PDF des attestations (volumineux, chargés en base par script)
+data/attestations/

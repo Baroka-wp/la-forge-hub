@@ -20,7 +20,9 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "admin:promote": "node scripts/promote-admin.mjs",
-    "deploy:coolify": "node scripts/coolify-deploy.mjs"
+    "deploy:coolify": "node scripts/coolify-deploy.mjs",
+    "db:seed:attestations": "node prisma/seed-attestations.mjs",
+    "db:import:attestations": "node scripts/import-attestations.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",

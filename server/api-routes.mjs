@@ -28,6 +28,7 @@ import {
   adminDeleteWebinar,
   adminWebinarRegistrations,
 } from '../api/admin-webinars.js';
+import { lookupCertificates, getCertificateFile } from '../api/attestations.js';
 import {
   adminListMarketingContacts,
   adminCreateMarketingContact,
@@ -88,4 +89,8 @@ export function registerApiRoutes(app) {
   app.post('/api/webinars/:id/replay-view', (req, res) => trackReplayView(req, res));
   app.post('/api/webinars/replay-optin', (req, res) => replayOptin(req, res));
   app.post('/api/newsletter/optin', (req, res) => newsletterOptin(req, res));
+
+  /** Attestations NOAI / Bootcamp IOAI (page publique non listée /attestations). */
+  app.post('/api/attestations/lookup', (req, res) => lookupCertificates(req, res));
+  app.get('/api/attestations/file', (req, res) => getCertificateFile(req, res));
 }
