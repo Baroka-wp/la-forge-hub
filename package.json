@@ -8,7 +8,7 @@
   },
   "scripts": {
     "postinstall": "prisma generate",
-    "start": "node server/prod.mjs",
+    "start": "prisma migrate deploy && node server/prod.mjs",
     "dev": "node server/dev.mjs",
     "dev:kill": "bash scripts/kill-dev-ports.sh",
     "dev:vite": "vite",

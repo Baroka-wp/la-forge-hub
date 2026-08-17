@@ -5,6 +5,8 @@
  */
 import register from '../api/register.js';
 import login from '../api/login.js';
+import forgotPassword from '../api/forgot-password.js';
+import resetPassword from '../api/reset-password.js';
 import me from '../api/me.js';
 import profile from '../api/profile.js';
 import enroll from '../api/enroll.js';
@@ -49,6 +51,8 @@ export function registerApiRoutes(app) {
 
   app.post('/api/register', (req, res) => register(req, res));
   app.post('/api/login', (req, res) => login(req, res));
+  app.post('/api/forgot-password', (req, res) => forgotPassword(req, res));
+  app.post('/api/reset-password', (req, res) => resetPassword(req, res));
   app.get('/api/me', (req, res) => me(req, res));
   app.patch('/api/profile', (req, res) => profile(req, res));
   app.post('/api/enroll', (req, res) => enroll(req, res));

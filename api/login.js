@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
       return sendJson(res, 401, { error: 'E-mail ou mot de passe incorrect' });
     }
-    const token = signToken({ sub: user.id, email: user.email });
+    const token = signToken({ sub: user.id, email: user.email, av: user.authVersion });
     return sendJson(res, 200, {
       token,
       user: {

@@ -225,6 +225,32 @@ export async function signIn(email, password) {
   return { ok: true, user: { id: a.id, email: a.email } };
 }
 
+export async function requestPasswordReset(email) {
+  if (!neonMode()) {
+    return { ok: false, error: 'La réinitialisation par e-mail nécessite le serveur.' };
+  }
+  const r = await apiFetch('/api/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || 'Une erreur est survenue.' };
+  return { ok: true, message: data.message };
+}
+
+export async function resetPassword(token, password) {
+  if (!neonMode()) {
+    return { ok: false, error: 'La réinitialisation par e-mail nécessite le serveur.' };
+  }
+  const r = await apiFetch('/api/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || 'Une erreur est survenue.' };
+  return { ok: true, message: data.message };
+}
+
 export async function signOut() {
   if (neonMode()) {
     localStorage.removeItem(JWT_KEY);

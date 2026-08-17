@@ -4,6 +4,8 @@ import {
   signIn,
   signUp,
   signOut,
+  requestPasswordReset,
+  resetPassword,
   enroll,
   isEnrolled,
   getProgressMap,
@@ -91,6 +93,8 @@ function matchRoute() {
   if (parts.length === 0) return { name: 'home' };
   if (parts[0] === 'login') return { name: 'login' };
   if (parts[0] === 'register') return { name: 'register' };
+  if (parts[0] === 'forgot-password') return { name: 'forgot-password' };
+  if (parts[0] === 'reset-password') return { name: 'reset-password' };
   if (parts[0] === 'dashboard') return { name: 'dashboard' };
   if (parts[0] === 'cgu') return { name: 'cgu' };
   if (parts[0] === 'webinars') {
@@ -420,6 +424,18 @@ async function render() {
         description: `Créez un compte pour suivre le parcours ${COURSE.title}, enregistrer votre progression et participer aux webinaires.`,
       });
       bindAuthForm('register');
+    } else if (route.name === 'forgot-password') {
+      app.innerHTML = shell(renderForgotPassword(), {
+        title: `Mot de passe oublié — ${PLATFORM_BRAND}`,
+        description: `Recevez un lien sécurisé pour réinitialiser votre mot de passe ${PLATFORM_BRAND}.`,
+      });
+      bindForgotPasswordForm();
+    } else if (route.name === 'reset-password') {
+      app.innerHTML = shell(renderResetPassword(), {
+        title: `Nouveau mot de passe — ${PLATFORM_BRAND}`,
+        description: `Choisissez un nouveau mot de passe pour votre compte ${PLATFORM_BRAND}.`,
+      });
+      bindResetPasswordForm();
     } else if (route.name === 'cgu') {
       app.innerHTML = shell(renderCguPageHtml(), {
         title: `CGU — ${PLATFORM_BRAND}`,
@@ -921,14 +937,17 @@ function bindHomeOptinForm() {
 
 function renderAuth(mode) {
   const isLogin = mode === 'login';
+  const passwordReset = isLogin && new URLSearchParams(window.location.search).get('password-reset') === 'success';
   return `
     <section class="auth-panel">
       <h1 class="h1">${isLogin ? 'Connexion' : 'Créer un compte'}</h1>
       <p class="muted">${isLogin ? 'Accédez à votre progression et à la communauté.' : 'Rejoignez le parcours et suivez vos leçons.'}</p>
+      ${passwordReset ? '<p class="auth-success" role="status">Votre mot de passe a été modifié. Vous pouvez maintenant vous connecter.</p>' : ''}
       <form id="authForm" class="form-stack">
         ${isLogin ? '' : `<label>Nom affiché<input type="text" name="displayName" autocomplete="name" required /></label>`}
         <label>E-mail<input type="email" name="email" autocomplete="email" required /></label>
         <label>Mot de passe<input type="password" name="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="6" /></label>
+        ${isLogin ? `<p class="auth-help"><a data-router href="/forgot-password">Mot de passe oublié ?</a></p>` : ''}
         <p id="authError" class="form-error" role="alert"></p>
         <button type="submit" class="btn btn-primary btn-block">${isLogin ? 'Se connecter' : "S'inscrire"}</button>
       </form>
@@ -937,6 +956,92 @@ function renderAuth(mode) {
       </p>
     </section>
   `;
+}
+
+function renderForgotPassword() {
+  return `
+    <section class="auth-panel">
+      <h1 class="h1">Mot de passe oublié</h1>
+      <p class="muted">Indiquez l’adresse e-mail de votre compte. Nous vous enverrons un lien valable 30 minutes.</p>
+      <form id="forgotPasswordForm" class="form-stack">
+        <label>E-mail<input type="email" name="email" autocomplete="email" required /></label>
+        <p id="authError" class="form-error" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Envoyer le lien</button>
+      </form>
+      <p class="text-center muted"><a data-router href="/login">Retour à la connexion</a></p>
+    </section>`;
+}
+
+function bindForgotPasswordForm() {
+  const form = document.getElementById('forgotPasswordForm');
+  const message = document.getElementById('authError');
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.textContent = '';
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    const email = String(new FormData(form).get('email') || '').trim();
+    try {
+      const result = await requestPasswordReset(email);
+      message.textContent = result.ok ? result.message : result.error;
+      message.classList.toggle('is-success', result.ok);
+    } catch {
+      message.textContent = 'Connexion impossible. Réessayez.';
+      message.classList.remove('is-success');
+    } finally {
+      button.disabled = false;
+    }
+  });
+}
+
+function renderResetPassword() {
+  const token = new URLSearchParams(window.location.search).get('token') || '';
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    return `<section class="auth-panel"><h1 class="h1">Lien invalide</h1><p class="muted">Ce lien de réinitialisation est incomplet ou invalide.</p><a data-router class="btn btn-primary btn-block" href="/forgot-password">Demander un nouveau lien</a></section>`;
+  }
+  return `
+    <section class="auth-panel">
+      <h1 class="h1">Nouveau mot de passe</h1>
+      <p class="muted">Choisissez un mot de passe d’au moins 8 caractères.</p>
+      <form id="resetPasswordForm" class="form-stack">
+        <label>Nouveau mot de passe<input type="password" name="password" autocomplete="new-password" required minlength="8" /></label>
+        <label>Confirmer le mot de passe<input type="password" name="confirmation" autocomplete="new-password" required minlength="8" /></label>
+        <p id="authError" class="form-error" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Changer le mot de passe</button>
+      </form>
+    </section>`;
+}
+
+function bindResetPasswordForm() {
+  const form = document.getElementById('resetPasswordForm');
+  const message = document.getElementById('authError');
+  if (!form) return;
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    message.textContent = '';
+    const data = new FormData(form);
+    const password = String(data.get('password') || '');
+    if (password !== String(data.get('confirmation') || '')) {
+      message.textContent = 'Les deux mots de passe ne correspondent pas.';
+      return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const token = new URLSearchParams(window.location.search).get('token') || '';
+      const result = await resetPassword(token, password);
+      if (!result.ok) {
+        message.textContent = result.error;
+        return;
+      }
+      navigate('/login?password-reset=success');
+    } catch {
+      message.textContent = 'Connexion impossible. Réessayez.';
+    } finally {
+      button.disabled = false;
+    }
+  });
 }
 
 function bindAuthForm(mode) {
@@ -1331,4 +1436,3 @@ function renderAdminAccessDenied() {
       </div>
     </section>`;
 }
-

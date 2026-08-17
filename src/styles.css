@@ -1818,6 +1818,29 @@ body:has(.home-landing) .site-footer {
   min-height: 1.2em;
 }
 
+.form-error.is-success,
+.auth-success {
+  color: #1f7a45;
+}
+
+.auth-success {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: #edf8f1;
+  font-size: 14px;
+}
+
+.auth-help {
+  margin: -8px 0 0;
+  text-align: right;
+  font-size: 13px;
+}
+
+.auth-panel > .text-center {
+  margin-top: 20px;
+}
+
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

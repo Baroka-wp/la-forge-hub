@@ -28,10 +28,11 @@ export default async function handler(req, res) {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { email, passwordHash, displayName },
-      select: { id: true, email: true, displayName: true, role: true },
+      select: { id: true, email: true, displayName: true, role: true, authVersion: true },
     });
-    const token = signToken({ sub: user.id, email: user.email });
-    return sendJson(res, 201, { token, user });
+    const token = signToken({ sub: user.id, email: user.email, av: user.authVersion });
+    const { authVersion: _authVersion, ...publicUser } = user;
+    return sendJson(res, 201, { token, user: publicUser });
   } catch (e) {
     if (e.code === 'P2002') {
       return sendJson(res, 409, { error: 'Cette adresse e-mail est déjà utilisée' });
