@@ -195,3 +195,89 @@ model Lesson {
   @@index([courseSlug])
   @@map("lessons")
 }
+
+/* ---------- Attestations NOAI / Bootcamp IOAI ---------- */
+
+enum CertificateKind {
+  NOAI
+  BOOTCAMP
+}
+
+/**
+ * Participant NOAI 2026 (liste officielle, chargée par `db:seed:attestations`).
+ * Les coordonnées sont vides au départ : elles sont renseignées, puis mises à jour,
+ * à chaque demande d'attestation validée depuis /attestations.
+ */
+model Participant {
+  id           String  @id @default(uuid())
+  tableNumber  String  @unique @map("table_number")
+  lastName     String  @map("last_name")
+  firstName    String  @map("first_name")
+
+  /** Renseignés par le participant lors de sa demande. */
+  email        String?
+  phone        String?
+  /** Nom tel qu'il l'a saisi, conservé s'il diffère de la liste officielle. */
+  declaredName String? @map("declared_name")
+
+  requestCount  Int       @default(0) @map("request_count")
+  firstRequestAt DateTime? @map("first_request_at")
+  lastRequestAt  DateTime? @map("last_request_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  certificates Certificate[]
+
+  @@index([email])
+  @@map("participants")
+}
+
+/** Attestation nominative. Le PDF est rattaché après le seed, par script d'import. */
+model Certificate {
+  id            String          @id @default(uuid())
+  participantId String          @map("participant_id")
+  kind          CertificateKind
+  fileName      String?         @map("file_name")
+  pdf           Bytes?
+  /** Aperçu JPEG page 1 (affichage fiable sur mobile, où l'iframe PDF échoue souvent). */
+  previewImage  Bytes?          @map("preview_image")
+  downloadCount Int             @default(0) @map("download_count")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  participant Participant           @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  downloads   CertificateDownload[]
+
+  @@unique([participantId, kind])
+  @@map("certificates")
+}
+
+/** Journal de toutes les demandes, y compris celles en échec (relance et support). */
+model CertificateRequest {
+  id           String   @id @default(uuid())
+  tableNumber  String   @map("table_number")
+  providedName String   @map("provided_name")
+  email        String
+  phone        String
+  /** FOUND | NAME_MISMATCH | NOT_FOUND */
+  outcome      String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([tableNumber])
+  @@index([outcome])
+  @@map("certificate_requests")
+}
+
+/** Une ligne par téléchargement effectif (le compteur agrégé vit sur Certificate). */
+model CertificateDownload {
+  id            String   @id @default(uuid())
+  certificateId String   @map("certificate_id")
+  email         String?
+  downloadedAt  DateTime @default(now()) @map("downloaded_at")
+
+  certificate Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@index([certificateId])
+  @@map("certificate_downloads")
+}

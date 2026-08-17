@@ -71,6 +71,7 @@ import {
 } from './webinars-ui.js';
 import { pushLoading, popLoading, withLoading } from './loader.js';
 import { renderCguPageHtml } from './legal-cgu.js';
+import { renderAttestationsPageHtml, bindAttestationsPage } from './attestations.js';
 import { applySeoMeta, DEFAULT_SITE_DESCRIPTION, truncateMetaDescription } from './seo.js';
 
 /** Rempli au démarrage par `loadCatalogSessions()` (base Neon ou fallback fichier) */
@@ -97,6 +98,8 @@ function matchRoute() {
   if (parts[0] === 'reset-password') return { name: 'reset-password' };
   if (parts[0] === 'dashboard') return { name: 'dashboard' };
   if (parts[0] === 'cgu') return { name: 'cgu' };
+  /** Page non listée dans le menu — accès par lien direct uniquement. */
+  if (parts[0] === 'attestations') return { name: 'attestations' };
   if (parts[0] === 'webinars') {
     if (parts.length === 1) return { name: 'webinars' };
     if (parts.length === 2) return { name: 'webinar-detail', id: parts[1] };
@@ -441,6 +444,17 @@ async function render() {
         title: `CGU — ${PLATFORM_BRAND}`,
         description: `Conditions générales d’utilisation du site ${PLATFORM_BRAND} : compte, contenus, données personnelles et responsabilités.`,
       });
+    } else if (route.name === 'attestations') {
+      applySeoMeta({
+        title: 'Attestation de participation NOAI 2026',
+        description:
+          'Espace de retrait des attestations de participation aux Olympiades Nationales d’Intelligence Artificielle 2026.',
+        noIndex: true,
+      });
+      document.title = 'Attestation de participation NOAI 2026';
+      app.innerHTML = renderAttestationsPageHtml();
+      bindAttestationsPage();
+      return;
     } else if (route.name === 'course' && route.slug === COURSE.slug) {
       app.innerHTML = shell(await renderCourse(), {
         title: `${COURSE.title} — Parcours`,

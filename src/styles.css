@@ -5043,3 +5043,280 @@ body.is-global-loading .global-loader {
     align-items: center;
   }
 }
+
+/* ==========================================================================
+   Attestations NOAI 2026 — page publique non listée (/attestations)
+   Charte reprise du document officiel : bleu marine #113E6D, vert #18A16C,
+   bandeau dégradé marine → sarcelle, fond blanc, sans trait décoratif.
+   ========================================================================== */
+
+.noai-page {
+  --noai-navy: #113e6d;
+  --noai-navy-deep: #0b2c50;
+  --noai-green: #18a16c;
+  --noai-green-dark: #128257;
+  --noai-ink: #2f4f7c;
+  --noai-paper: #ffffff;
+
+  min-height: 100vh;
+  padding: clamp(1rem, 1rem + 2vw, 3rem) var(--gutter-safe-left) 3rem var(--gutter-safe-right);
+  background: linear-gradient(180deg, #eef3f8 0%, #f7fafc 46%, #eef3f8 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.noai-sheet {
+  width: 100%;
+  max-width: 60rem;
+  background: var(--noai-paper);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-ambient);
+  overflow: hidden;
+}
+
+.noai-banner {
+  background: linear-gradient(100deg, #18385b 0%, #17535d 62%, #12605f 100%);
+  padding: 0;
+  line-height: 0;
+}
+
+.noai-banner img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.noai-body {
+  padding: clamp(1.5rem, 1.2rem + 2.4vw, 3.25rem) clamp(1.25rem, 1rem + 2.6vw, 3.5rem)
+    clamp(2rem, 1.6rem + 2vw, 3.25rem);
+  text-align: center;
+}
+
+.noai-title {
+  color: var(--noai-navy);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-size: clamp(1.35rem, 1.05rem + 1.6vw, 2.1rem);
+  line-height: 1.2;
+}
+
+/* Rappel de la ligne pointillée verte sous le nom du lauréat. */
+.noai-rule {
+  width: min(24rem, 78%);
+  height: 0;
+  margin: 1.1rem auto 1.5rem;
+  border-top: 2px dotted var(--noai-green);
+  opacity: 0.85;
+}
+
+.noai-lead {
+  color: var(--noai-ink);
+  font-size: var(--text-lead);
+  line-height: 1.65;
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.noai-lead strong {
+  color: var(--noai-green-dark);
+  font-weight: 700;
+}
+
+.noai-note {
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 42rem;
+  margin: 0.85rem auto 0;
+}
+
+.noai-note-timer {
+  margin-top: 1.5rem;
+}
+
+.noai-actions {
+  margin-top: 1.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.noai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--tap-min);
+  padding: 0.8rem 1.6rem;
+  border: 0;
+  border-radius: 999px;
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+.noai-btn-primary {
+  background: var(--noai-green);
+  color: #fff;
+  box-shadow: 0 14px 26px -14px rgba(18, 130, 87, 0.9);
+}
+
+.noai-btn-primary:hover {
+  background: var(--noai-green-dark);
+  transform: translateY(-1px);
+}
+
+.noai-btn-ghost {
+  background: rgba(17, 62, 109, 0.07);
+  color: var(--noai-navy);
+}
+
+.noai-btn-ghost:hover {
+  background: rgba(17, 62, 109, 0.13);
+}
+
+.noai-btn-block {
+  width: 100%;
+}
+
+.noai-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.noai-btn.is-downloading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.noai-form {
+  margin: 1.75rem auto 0;
+  max-width: 30rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  text-align: left;
+}
+
+.noai-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.noai-field > span {
+  color: var(--noai-navy);
+  font-weight: 700;
+  font-size: 0.9375rem;
+}
+
+.noai-field input {
+  min-height: var(--tap-min);
+  padding: 0.7rem 0.95rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: #f1f5f9;
+  color: var(--on-surface);
+  font-family: var(--font);
+  font-size: 1rem;
+  outline: 2px solid transparent;
+  transition: outline-color 0.16s ease, background-color 0.16s ease;
+}
+
+.noai-field input:focus {
+  background: #fff;
+  outline-color: var(--noai-green);
+}
+
+.noai-field small {
+  color: var(--on-surface-variant);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.noai-message {
+  min-height: 1.25rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.noai-message.is-error {
+  color: #b3261e;
+  background: rgba(179, 38, 30, 0.08);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.9rem;
+}
+
+.noai-help {
+  margin-top: 1.6rem;
+  color: var(--on-surface-variant);
+  font-size: 0.9375rem;
+}
+
+.noai-help a {
+  color: var(--noai-green-dark);
+  font-weight: 700;
+}
+
+.noai-cert-list {
+  margin-top: 1.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.noai-cert-title {
+  color: var(--noai-navy);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-bottom: 0.9rem;
+}
+
+.noai-cert-preview {
+  background: #f1f5f9;
+  border-radius: var(--radius-lg);
+  padding: 0.6rem;
+  overflow: hidden;
+}
+
+.noai-cert-preview img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.noai-cert-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  justify-content: center;
+}
+
+.noai-back {
+  font-size: var(--text-footer);
+  color: var(--on-surface-variant);
+}
+
+.noai-back a {
+  color: var(--noai-navy);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .noai-cert-actions .noai-btn {
+    width: 100%;
+  }
+}

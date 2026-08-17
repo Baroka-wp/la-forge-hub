@@ -6,8 +6,8 @@ function secret() {
   return s;
 }
 
-export function signToken(payload) {
-  return jwt.sign(payload, secret(), { expiresIn: '30d', algorithm: 'HS256' });
+export function signToken(payload, options = {}) {
+  return jwt.sign(payload, secret(), { expiresIn: '30d', algorithm: 'HS256', ...options });
 }
 
 export function verifyToken(token) {
