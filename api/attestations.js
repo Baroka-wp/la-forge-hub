@@ -14,7 +14,7 @@ import { checkCertificateLookupRateLimit } from './_lib/certificateRateLimit.js'
  * délivré uniquement par le lookup.
  */
 
-const TOKEN_TTL = '30m';
+const TOKEN_TTL = '10m';
 const KIND_LABELS = {
   NOAI: 'Attestation de participation — NOAI 2026',
   BOOTCAMP: 'Attestation de participation — Bootcamp de préparation IOAI 2026',
@@ -60,6 +60,19 @@ function isEmail(value) {
 function isPhone(value) {
   const digits = String(value || '').replace(/\D/g, '');
   return digits.length >= 8 && digits.length <= 15;
+}
+
+function contentDisposition(disposition, fileName) {
+  const original = String(fileName || 'attestation.pdf');
+  const fallback = original
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '_')
+    .replace(/^\.+/, '') || 'attestation.pdf';
+  const encoded = encodeURIComponent(original).replace(/[!'()*]/g, (char) =>
+    `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+  return `${disposition}; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 /** POST /api/attestations/lookup */
@@ -259,7 +272,7 @@ export async function getCertificateFile(req, res) {
     const disposition = mode === 'download' ? 'attachment' : 'inline';
     res.statusCode = 200;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `${disposition}; filename="${certificate.fileName || 'attestation.pdf'}"`);
+    res.setHeader('Content-Disposition', contentDisposition(disposition, certificate.fileName));
     res.setHeader('Cache-Control', 'private, no-store');
     return res.end(Buffer.from(certificate.pdf));
   } catch (e) {

@@ -1,8 +1,6 @@
 import crypto from 'node:crypto';
 import { prisma } from './prisma.js';
 
-const MAX_REQUESTS = 5;
-
 function headerValue(req, name) {
   const value = req.headers?.[name];
   if (Array.isArray(value)) return value[0] || '';
@@ -20,18 +18,20 @@ function clientAddress(req) {
   );
 }
 
-function anonymousNetworkKey(req) {
+function anonymousNetworkKey(req, namespace) {
   const secret = String(process.env.RATE_LIMIT_SECRET || process.env.JWT_SECRET || '').trim();
   if (!secret) throw new Error('RATE_LIMIT_SECRET ou JWT_SECRET manquant');
-  return crypto.createHmac('sha256', secret).update(clientAddress(req)).digest('hex');
+  return crypto.createHmac('sha256', secret).update(`${namespace}:${clientAddress(req)}`).digest('hex');
 }
 
 /**
  * Fenêtre fixe persistante : cinq recherches au maximum en dix minutes.
  * L'UPSERT PostgreSQL rend l'incrément atomique, même avec plusieurs instances.
  */
-export async function checkCertificateLookupRateLimit(req) {
-  const ipHash = anonymousNetworkKey(req);
+export async function checkCertificateLookupRateLimit(req, options = {}) {
+  const namespace = String(options.namespace || 'lookup');
+  const maxRequests = Number(options.maxRequests || 5);
+  const ipHash = anonymousNetworkKey(req, namespace);
   const rows = await prisma.$queryRaw`
     INSERT INTO "certificate_rate_limits" ("ip_hash", "window_started_at", "request_count", "updated_at")
     VALUES (${ipHash}, NOW(), 1, NOW())
@@ -54,7 +54,7 @@ export async function checkCertificateLookupRateLimit(req) {
   `;
 
   const state = rows[0];
-  const allowed = Number(state?.requestCount || 0) <= MAX_REQUESTS;
+  const allowed = Number(state?.requestCount || 0) <= maxRequests;
   const retryAfterSeconds = allowed ? 0 : Number(state?.retryAfterSeconds || 1);
 
   return { allowed, retryAfterSeconds };

@@ -6,8 +6,6 @@
  *   intro → formulaire → résultats (aperçu + téléchargement)
  */
 
-const SUPPORT_EMAIL = 'birotori@gmail.com';
-
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -15,24 +13,6 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-}
-
-function supportMailto(context = '') {
-  const subject = encodeURIComponent('Attestation NOAI 2026 — demande d’assistance');
-  const body = encodeURIComponent(
-    [
-      'Bonjour,',
-      '',
-      "Je n'arrive pas à récupérer mon attestation de participation.",
-      '',
-      `Numéro de table : ${context || '…'}`,
-      'Nom et prénom(s) : ',
-      'Téléphone : ',
-      '',
-      'Merci de votre aide.',
-    ].join('\n'),
-  );
-  return `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`;
 }
 
 const BANNER = `
@@ -47,8 +27,35 @@ function pageFrame(inner) {
         ${BANNER}
         ${inner}
       </div>
-      <p class="noai-back"><a href="/" data-router>Retour à La Forge Hub</a></p>
+      <p class="noai-back"><a href="/" data-router>← Retour à La Forge Hub</a></p>
+      ${supportModalHtml()}
     </div>`;
+}
+
+function supportModalHtml() {
+  return `
+    <div class="noai-modal" id="noaiSupportModal" hidden>
+      <button class="noai-modal-backdrop" type="button" data-support-close aria-label="Fermer"></button>
+      <section class="noai-modal-panel" role="dialog" aria-modal="true" aria-labelledby="noaiSupportTitle">
+        <button class="noai-modal-close" type="button" data-support-close aria-label="Fermer">×</button>
+        <h2 id="noaiSupportTitle">Signaler un problème</h2>
+        <p>Votre message sera envoyé à l’administrateur de La Forge Hub.</p>
+        <form id="noaiSupportForm" class="noai-support-form">
+          <label><span>Numéro de table</span><input name="tableNumber" required></label>
+          <label><span>Nom et prénom(s)</span><input name="fullName" autocomplete="name" required></label>
+          <label><span>Adresse e-mail</span><input type="email" name="email" autocomplete="email" required></label>
+          <label><span>Numéro de téléphone</span><input type="tel" name="phone" autocomplete="tel" required></label>
+          <label><span>Votre message</span><textarea name="message" rows="5" maxlength="2000" required></textarea></label>
+          <label class="noai-honeypot" aria-hidden="true">Site web<input name="website" tabindex="-1" autocomplete="off"></label>
+          <p class="noai-message" id="noaiSupportMessage" role="alert" aria-live="polite"></p>
+          <button class="noai-btn noai-btn-primary noai-btn-block" type="submit" id="noaiSupportSubmit">Envoyer le message</button>
+        </form>
+      </section>
+    </div>`;
+}
+
+function supportButton(label = 'Écrire à l’administrateur', tableNumber = '') {
+  return `<button type="button" class="noai-support-link" data-support-open data-table-number="${escapeHtml(tableNumber)}">${label}</button>`;
 }
 
 function introHtml() {
@@ -71,7 +78,7 @@ function introHtml() {
       </div>
       <p class="noai-help">
         Un problème ?
-        <a href="${supportMailto()}">Écrire à l’administrateur</a>
+        ${supportButton()}
       </p>
     </div>`;
 }
@@ -118,7 +125,7 @@ function formHtml(prefill = {}) {
 
       <p class="noai-help">
         Vous ne retrouvez pas votre numéro de table ?
-        <a href="${supportMailto()}" id="noaiHelpLink">Écrire à l’administrateur</a>
+        ${supportButton()}
       </p>
     </div>`;
 }
@@ -135,9 +142,6 @@ function certificateCardHtml(certificate, token) {
       <div class="noai-cert-actions">
         <a class="noai-btn noai-btn-primary" href="${download}" data-download-id="${escapeHtml(certificate.id)}">
           Télécharger le PDF
-        </a>
-        <a class="noai-btn noai-btn-ghost" href="${preview.replace('mode=preview', 'mode=inline')}" target="_blank" rel="noopener">
-          Ouvrir en plein écran
         </a>
       </div>
     </article>`;
@@ -156,14 +160,14 @@ function resultHtml(data) {
       </p>
       <div class="noai-cert-list">${cards}</div>
       <p class="noai-note noai-note-timer">
-        Les liens de téléchargement restent actifs 30 minutes. Passé ce délai, relancez la recherche.
+        Les liens de téléchargement restent actifs 10 minutes. Passé ce délai, relancez la recherche.
       </p>
-      <div class="noai-actions">
+      <div class="noai-actions" id="noaiRestartActions" hidden>
         <button type="button" class="noai-btn noai-btn-ghost" id="noaiRestartBtn">Nouvelle recherche</button>
       </div>
       <p class="noai-help">
         Une erreur sur votre attestation ?
-        <a href="${supportMailto(data.holder.tableNumber)}">Écrire à l’administrateur</a>
+        ${supportButton('Écrire à l’administrateur', data.holder.tableNumber)}
       </p>
     </div>`;
 }
@@ -175,8 +179,11 @@ export function renderAttestationsPageHtml() {
 export function bindAttestationsPage() {
   const sheet = document.querySelector('.noai-sheet');
   if (!sheet) return;
+  let lastLookup = {};
+  let restartTimer = null;
 
   function mount(html) {
+    if (restartTimer) clearTimeout(restartTimer);
     const body = sheet.querySelector('.noai-body');
     if (body) body.remove();
     sheet.insertAdjacentHTML('beforeend', html);
@@ -191,14 +198,92 @@ export function bindAttestationsPage() {
     const restartBtn = document.getElementById('noaiRestartBtn');
     if (restartBtn) restartBtn.addEventListener('click', () => mount(formHtml()));
 
+    const restartActions = document.getElementById('noaiRestartActions');
+    if (restartActions) {
+      restartTimer = setTimeout(() => {
+        restartActions.hidden = false;
+        const note = document.querySelector('.noai-note-timer');
+        if (note) note.textContent = 'Les liens ont expiré. Vous pouvez effectuer une nouvelle recherche.';
+      }, 10 * 60 * 1000);
+    }
+
     const form = document.getElementById('noaiForm');
     if (form) bindForm(form);
+
+    document.querySelectorAll('[data-support-open]').forEach((button) => {
+      button.addEventListener('click', () => openSupportModal(button.dataset.tableNumber || ''));
+    });
 
     document.querySelectorAll('[data-download-id]').forEach((link) => {
       link.addEventListener('click', () => {
         link.classList.add('is-downloading');
         setTimeout(() => link.classList.remove('is-downloading'), 2500);
       });
+    });
+  }
+
+  function openSupportModal(tableNumber = '') {
+    const modal = document.getElementById('noaiSupportModal');
+    const form = document.getElementById('noaiSupportForm');
+    if (!modal || !form) return;
+    form.elements.tableNumber.value = tableNumber || lastLookup.tableNumber || '';
+    form.elements.fullName.value = lastLookup.fullName || '';
+    form.elements.email.value = lastLookup.email || '';
+    form.elements.phone.value = lastLookup.phone || '';
+    const message = document.getElementById('noaiSupportMessage');
+    if (message) {
+      message.textContent = '';
+      message.className = 'noai-message';
+    }
+    modal.hidden = false;
+    document.body.classList.add('no-scroll');
+    form.elements.message.focus();
+  }
+
+  function closeSupportModal() {
+    const modal = document.getElementById('noaiSupportModal');
+    if (modal) modal.hidden = true;
+    document.body.classList.remove('no-scroll');
+  }
+
+  function bindSupportModal() {
+    const modal = document.getElementById('noaiSupportModal');
+    document.querySelectorAll('[data-support-close]').forEach((button) => {
+      button.addEventListener('click', closeSupportModal);
+    });
+    modal?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSupportModal();
+    });
+
+    const form = document.getElementById('noaiSupportForm');
+    if (!form) return;
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('noaiSupportMessage');
+      const submit = document.getElementById('noaiSupportSubmit');
+      message.textContent = '';
+      message.className = 'noai-message';
+      submit.disabled = true;
+      submit.textContent = 'Envoi en cours…';
+      try {
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const response = await fetch('/api/attestations/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error || 'Envoi impossible.');
+        message.textContent = 'Message envoyé. L’administrateur vous répondra par e-mail.';
+        message.classList.add('is-success');
+        form.elements.message.value = '';
+      } catch (error) {
+        message.textContent = error.message || 'Envoi impossible. Réessayez.';
+        message.classList.add('is-error');
+      } finally {
+        submit.disabled = false;
+        submit.textContent = 'Envoyer le message';
+      }
     });
   }
 
@@ -218,6 +303,7 @@ export function bindAttestationsPage() {
         email: String(data.email || '').trim(),
         phone: String(data.phone || '').trim(),
       };
+      lastLookup = payload;
 
       const missing = Object.entries(payload).filter(([, v]) => !v);
       if (missing.length) {
@@ -244,8 +330,6 @@ export function bindAttestationsPage() {
 
         message.textContent = body.error || 'Vérification impossible. Réessayez.';
         message.classList.add('is-error');
-        const help = document.getElementById('noaiHelpLink');
-        if (help) help.setAttribute('href', supportMailto(payload.tableNumber));
       } catch {
         message.textContent = 'Connexion impossible. Vérifiez votre réseau et réessayez.';
         message.classList.add('is-error');
@@ -256,5 +340,6 @@ export function bindAttestationsPage() {
     });
   }
 
+  bindSupportModal();
   wire();
 }
