@@ -8,6 +8,7 @@ on:
 jobs:
   coolify-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - name: Trigger Coolify deployment
         env:
@@ -31,7 +32,7 @@ jobs:
           fi
           echo "Deployment queued: $deployment_id"
 
-          for attempt in $(seq 1 60); do
+          for attempt in $(seq 1 180); do
             deployment=$(curl -fsS \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               "$COOLIFY_URL/api/v1/deployments/$deployment_id")
