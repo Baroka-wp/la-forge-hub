@@ -73,3 +73,14 @@ CREATE INDEX "certificate_downloads_certificate_id_idx" ON "certificate_download
 ALTER TABLE "certificate_downloads"
 ADD CONSTRAINT "certificate_downloads_certificate_id_fkey"
 FOREIGN KEY ("certificate_id") REFERENCES "certificates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Limitation persistante des recherches publiques. Seule une empreinte HMAC
+-- de l'adresse réseau est conservée, jamais l'adresse brute.
+CREATE TABLE "certificate_rate_limits" (
+    "ip_hash" TEXT NOT NULL,
+    "window_started_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "request_count" INTEGER NOT NULL DEFAULT 1,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "certificate_rate_limits_pkey" PRIMARY KEY ("ip_hash")
+);

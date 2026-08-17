@@ -102,3 +102,7 @@ ORDER BY c.download_count DESC;
 Les demandes en échec (numéro inconnu, nom qui ne correspond pas) sont conservées dans
 `certificate_requests` pour le support ; l'adresse d'assistance affichée est
 birotori@gmail.com.
+
+La recherche est limitée à cinq tentatives par adresse réseau sur dix minutes. Seule une
+empreinte HMAC anonyme est stockée dans `certificate_rate_limits`. Elle utilise
+`RATE_LIMIT_SECRET` si cette variable est définie, sinon le `JWT_SECRET` existant.

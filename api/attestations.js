@@ -1,6 +1,7 @@
 import { prisma } from './_lib/prisma.js';
 import { readJsonBody, sendJson, setCors } from './_lib/http.js';
 import { signToken, verifyToken } from './_lib/jwt.js';
+import { checkCertificateLookupRateLimit } from './_lib/certificateRateLimit.js';
 
 /**
  * Diffusion des attestations NOAI / Bootcamp IOAI.
@@ -73,6 +74,14 @@ export async function lookupCertificates(req, res) {
   }
 
   try {
+    const rateLimit = await checkCertificateLookupRateLimit(req);
+    if (!rateLimit.allowed) {
+      res.setHeader('Retry-After', String(rateLimit.retryAfterSeconds));
+      return sendJson(res, 429, {
+        error: 'Trop de tentatives. Patientez quelques minutes avant de réessayer.',
+      });
+    }
+
     const body = await readJsonBody(req);
     const fullName = String(body.fullName || '').trim();
     const email = String(body.email || '').trim().toLowerCase();

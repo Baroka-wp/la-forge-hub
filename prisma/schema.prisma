@@ -281,3 +281,13 @@ model CertificateDownload {
   @@index([certificateId])
   @@map("certificate_downloads")
 }
+
+/** Fenêtre de limitation des recherches, identifiée par une empreinte réseau anonyme. */
+model CertificateRateLimit {
+  ipHash          String   @id @map("ip_hash")
+  windowStartedAt DateTime @default(now()) @map("window_started_at")
+  requestCount    Int      @default(1) @map("request_count")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("certificate_rate_limits")
+}
