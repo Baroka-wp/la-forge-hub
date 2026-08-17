@@ -19,8 +19,30 @@ jobs:
             echo "Missing Coolify secrets" >&2
             exit 1
           fi
-          curl -fsS -X POST \
+          response=$(curl -fsS -X POST \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Content-Type: application/json" \
             --data "{\"uuid\":\"$COOLIFY_APP_ID\",\"force\":true}" \
-            "$COOLIFY_URL/api/v1/deploy"
+            "$COOLIFY_URL/api/v1/deploy")
+          deployment_id=$(echo "$response" | jq -r '.deployments[0].deployment_uuid // empty')
+          if [ -z "$deployment_id" ]; then
+            echo "Coolify did not return a deployment id" >&2
+            exit 1
+          fi
+          echo "Deployment queued: $deployment_id"
+
+          for attempt in $(seq 1 60); do
+            deployment=$(curl -fsS \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              "$COOLIFY_URL/api/v1/deployments/$deployment_id")
+            status=$(echo "$deployment" | jq -r '.status // "unknown"')
+            echo "Coolify status: $status"
+            case "$status" in
+              finished) exit 0 ;;
+              failed|cancelled|cancelled-by-user) exit 1 ;;
+            esac
+            sleep 10
+          done
+
+          echo "Coolify deployment timed out" >&2
+          exit 1
