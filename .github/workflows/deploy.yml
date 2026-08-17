@@ -40,7 +40,16 @@ jobs:
             echo "Coolify status: $status"
             case "$status" in
               finished) exit 0 ;;
-              failed|cancelled|cancelled-by-user) exit 1 ;;
+              failed|cancelled|cancelled-by-user)
+                echo "Recent Coolify deployment errors:" >&2
+                echo "$deployment" \
+                  | jq -r '(.logs | fromjson? // []) | map(select(.hidden != true)) | sort_by(.batch, .order) | .[-30:][]? | .output' \
+                  | sed -E \
+                      -e 's#(postgres(ql)?|https?)://[^[:space:]]+#<redacted-url>#g' \
+                      -e 's/(password|token|secret|authorization)[=:][^[:space:]]+/\1=<redacted>/Ig' \
+                  >&2
+                exit 1
+                ;;
             esac
             sleep 10
           done
