@@ -29,6 +29,7 @@ import {
   adminWebinarRegistrations,
 } from '../api/admin-webinars.js';
 import { lookupCertificates, getCertificateFile } from '../api/attestations.js';
+import adminAttestationsImport from '../api/admin-attestations-import.js';
 import {
   adminListMarketingContacts,
   adminCreateMarketingContact,
@@ -93,4 +94,5 @@ export function registerApiRoutes(app) {
   /** Attestations NOAI / Bootcamp IOAI (page publique non listée /attestations). */
   app.post('/api/attestations/lookup', (req, res) => lookupCertificates(req, res));
   app.get('/api/attestations/file', (req, res) => getCertificateFile(req, res));
+  app.post('/api/admin/attestations/import', (req, res) => adminAttestationsImport(req, res));
 }

@@ -15,11 +15,34 @@ jobs:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_APP_ID: ${{ secrets.COOLIFY_APPLICATION_ID }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
+          IMPORT_TOKEN: ${{ secrets.ATTESTATIONS_IMPORT_TOKEN }}
         run: |
           if [ -z "$COOLIFY_URL" ] || [ -z "$COOLIFY_APP_ID" ] || [ -z "$COOLIFY_TOKEN" ]; then
             echo "Missing Coolify secrets" >&2
             exit 1
           fi
+
+          if [ -n "$IMPORT_TOKEN" ]; then
+            env_payload=$(jq -n --arg key "ATTESTATIONS_IMPORT_TOKEN" --arg value "$IMPORT_TOKEN" \
+              '{key: $key, value: $value, is_preview: false, is_literal: true}')
+            env_status=$(curl -sS -o /tmp/coolify-env-response -w '%{http_code}' -X PATCH \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "$env_payload" \
+              "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_ID/envs")
+            if [ "$env_status" = "404" ]; then
+              env_status=$(curl -sS -o /tmp/coolify-env-response -w '%{http_code}' -X POST \
+                -H "Authorization: Bearer $COOLIFY_TOKEN" \
+                -H "Content-Type: application/json" \
+                --data "$env_payload" \
+                "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_ID/envs")
+            fi
+            case "$env_status" in
+              2*) ;;
+              *) echo "Unable to configure the protected attestation import" >&2; exit 1 ;;
+            esac
+          fi
+
           response=$(curl -fsS -X POST \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
             -H "Content-Type: application/json" \
