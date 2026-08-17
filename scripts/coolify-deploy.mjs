@@ -10,7 +10,7 @@ if (!baseUrl || !token || !appId) {
   process.exit(1);
 }
 
-const target = `${baseUrl}/api/v1/applications/${appId}/deploy`;
+const target = `${baseUrl}/api/v1/deploy`;
 
 async function trigger() {
   const res = await fetch(target, {
@@ -19,7 +19,7 @@ async function trigger() {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ uuid: appId, force: true }),
   });
   if (!res.ok) {
     const text = await res.text();

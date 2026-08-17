@@ -9,7 +9,7 @@ jobs:
   coolify-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Coolify restart
+      - name: Trigger Coolify deployment
         env:
           COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
           COOLIFY_APP_ID: ${{ secrets.COOLIFY_APPLICATION_ID }}
@@ -19,6 +19,8 @@ jobs:
             echo "Missing Coolify secrets" >&2
             exit 1
           fi
-          curl -sS -X POST \
+          curl -fsS -X POST \
             -H "Authorization: Bearer $COOLIFY_TOKEN" \
-            "$COOLIFY_URL/api/v1/applications/$COOLIFY_APP_ID/restart" || exit 1
+            -H "Content-Type: application/json" \
+            --data "{\"uuid\":\"$COOLIFY_APP_ID\",\"force\":true}" \
+            "$COOLIFY_URL/api/v1/deploy"
