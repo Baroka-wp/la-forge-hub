@@ -16,7 +16,7 @@ export async function requireUser(req) {
   if (!payload?.sub) return { error: 'Token invalide', status: 401 };
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
-    select: { id: true, email: true, displayName: true, role: true, authVersion: true },
+    select: { id: true, email: true, displayName: true, role: true, segment: true, birthYear: true, authVersion: true },
   });
   if (!user) return { error: 'Utilisateur introuvable', status: 401 };
   if ((payload.av ?? 0) !== user.authVersion) return { error: 'Session expirée', status: 401 };
@@ -49,7 +49,7 @@ export async function optionalUser(req) {
   if (!payload?.sub) return { user: null };
   const user = await prisma.user.findUnique({
     where: { id: payload.sub },
-    select: { id: true, email: true, displayName: true, role: true, authVersion: true },
+    select: { id: true, email: true, displayName: true, role: true, segment: true, birthYear: true, authVersion: true },
   });
   if (!user || (payload.av ?? 0) !== user.authVersion) return { user: null };
   const { authVersion: _authVersion, ...publicUser } = user;

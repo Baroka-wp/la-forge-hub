@@ -19,16 +19,25 @@ export default async function handler(req, res) {
       .toLowerCase();
     const password = String(body.password || '');
     const displayName = String(body.displayName || '').trim() || email.split('@')[0];
+    const segment = body.segment == null || body.segment === '' ? null : String(body.segment).toUpperCase();
+    const birthYear = body.birthYear == null || body.birthYear === '' ? null : Number(body.birthYear);
     if (!email || !password) {
       return sendJson(res, 400, { error: 'E-mail et mot de passe requis' });
     }
     if (password.length < 6) {
       return sendJson(res, 400, { error: 'Le mot de passe doit contenir au moins 6 caractères' });
     }
+    if (segment !== null && segment !== 'COLLEGE' && segment !== 'LYCEE') {
+      return sendJson(res, 400, { error: 'Niveau scolaire invalide' });
+    }
+    const currentYear = new Date().getFullYear();
+    if (birthYear !== null && (!Number.isInteger(birthYear) || birthYear < currentYear - 100 || birthYear > currentYear)) {
+      return sendJson(res, 400, { error: 'Année de naissance invalide' });
+    }
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, displayName },
-      select: { id: true, email: true, displayName: true, role: true, authVersion: true },
+      data: { email, passwordHash, displayName, segment, birthYear },
+      select: { id: true, email: true, displayName: true, role: true, segment: true, birthYear: true, authVersion: true },
     });
     const token = signToken({ sub: user.id, email: user.email, av: user.authVersion });
     const { authVersion: _authVersion, ...publicUser } = user;
