@@ -13,6 +13,16 @@ import enroll from '../api/enroll.js';
 import progress from '../api/progress.js';
 import posts from '../api/posts.js';
 import lessons from '../api/lessons.js';
+import getLessonContent from '../api/lesson-content.js';
+import { listTracks, getTrack } from '../api/tracks.js';
+import { submitQuiz, submitExercise, listAttempts } from '../api/evaluations.js';
+import { submitProject } from '../api/projects.js';
+import { getMyProgress } from '../api/me-progress.js';
+import {
+  adminListTracks, adminCreateTrack, adminPatchTrack,
+  adminCreateModule, adminPatchModule, adminCreateExercise, adminCreateQuizQuestion,
+  adminListSubmissions, adminPatchSubmission,
+} from '../api/admin-lms.js';
 import { createLesson, patchLesson, deleteLesson } from '../api/admin-lessons.js';
 import { overview, listUsers, getUserDetail, patchUser } from '../api/admin-users.js';
 import { listWebinars, getNextWebinar, getWebinarById } from '../api/webinars-public.js';
@@ -65,6 +75,23 @@ export function registerApiRoutes(app) {
   app.get('/api/posts', (req, res) => posts(req, res));
   app.post('/api/posts', (req, res) => posts(req, res));
   app.get('/api/lessons', (req, res) => lessons(req, res));
+  app.get('/api/lessons/:lessonId', (req, res) => getLessonContent(req, res));
+  app.get('/api/tracks', (req, res) => listTracks(req, res));
+  app.get('/api/tracks/:slug', (req, res) => getTrack(req, res));
+  app.post('/api/quiz/:lessonId/submit', (req, res) => submitQuiz(req, res));
+  app.post('/api/exercises/:exerciseId/submit', (req, res) => submitExercise(req, res));
+  app.get('/api/attempts', (req, res) => listAttempts(req, res));
+  app.post('/api/projects/:projectId/submit', (req, res) => submitProject(req, res));
+  app.get('/api/me/progress', (req, res) => getMyProgress(req, res));
+  app.get('/api/admin/tracks', (req, res) => adminListTracks(req, res));
+  app.post('/api/admin/tracks', (req, res) => adminCreateTrack(req, res));
+  app.patch('/api/admin/tracks/:id', (req, res) => adminPatchTrack(req, res));
+  app.post('/api/admin/modules', (req, res) => adminCreateModule(req, res));
+  app.patch('/api/admin/modules/:id', (req, res) => adminPatchModule(req, res));
+  app.post('/api/admin/exercises', (req, res) => adminCreateExercise(req, res));
+  app.post('/api/admin/quiz-questions', (req, res) => adminCreateQuizQuestion(req, res));
+  app.get('/api/admin/submissions', (req, res) => adminListSubmissions(req, res));
+  app.patch('/api/admin/submissions/:id', (req, res) => adminPatchSubmission(req, res));
   app.post('/api/admin/lessons', (req, res) => createLesson(req, res));
   app.patch('/api/admin/lessons/:lessonId', (req, res) => patchLesson(req, res));
   app.delete('/api/admin/lessons/:lessonId', (req, res) => deleteLesson(req, res));

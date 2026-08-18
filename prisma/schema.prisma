@@ -13,6 +13,34 @@ enum UserRole {
   admin
 }
 
+enum Segment {
+  COLLEGE
+  LYCEE
+}
+
+enum Discipline {
+  PYTHON
+  MATH
+  ML
+  DEEP
+  NLP
+  SOFT
+}
+
+enum LessonKind {
+  VIDEO
+  READING
+  EXERCISE
+  QUIZ
+  PROJECT
+}
+
+enum AttemptStatus {
+  PASSED
+  FAILED
+  PENDING_REVIEW
+}
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -22,6 +50,8 @@ model User {
   authVersion  Int      @default(0) @map("auth_version")
   /** Accepte les e-mails d’annonces La Forge Hub (formation, webinaires). */
   marketingOptIn Boolean @default(false) @map("marketing_opt_in")
+  segment        Segment?
+  birthYear      Int?     @map("birth_year")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -30,6 +60,10 @@ model User {
   posts                CommunityPost[]
   webinarRegistrations WebinarRegistration[]
   passwordResetTokens  PasswordResetToken[]
+  attempts             Attempt[]
+  projectSubmissions   ProjectSubmission[] @relation("ProjectAuthor")
+  reviewedSubmissions  ProjectSubmission[] @relation("ProjectReviewer")
+  badges               UserBadge[]
 
   @@map("users")
 }
@@ -125,11 +159,14 @@ model Enrollment {
   id         String   @id @default(uuid())
   userId     String   @map("user_id")
   courseSlug String   @default("formation-ia") @map("course_slug")
+  trackId    String?  @map("track_id")
   enrolledAt DateTime @default(now()) @map("enrolled_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  track Track? @relation(fields: [trackId], references: [id], onDelete: SetNull)
 
   @@unique([userId, courseSlug])
+  @@index([trackId])
   @@map("enrollments")
 }
 
@@ -184,16 +221,192 @@ model Lesson {
   title       String
   /** Résumé affiché dans le menu des leçons et le catalogue (optionnel) */
   description String?   @db.Text @map("description")
-  youtubeId   String    @map("youtube_id")
+  moduleId    String?   @map("module_id")
+  kind        LessonKind @default(VIDEO)
+  youtubeId   String?   @map("youtube_id")
+  bodyMarkdown String?  @db.Text @map("body_markdown")
+  durationMin Int?      @map("duration_min")
+  published   Boolean   @default(true)
   tag         String
   collabUrl   String?   @map("collab_url")
   recordedAt  DateTime? @map("recorded_at")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
+  module        Module?        @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  exercises     Exercise[]
+  quizQuestions QuizQuestion[]
+  attempts      Attempt[]
+  projects      Project[]
+
   @@unique([courseSlug, position])
   @@index([courseSlug])
+  @@index([moduleId])
   @@map("lessons")
+}
+
+model Track {
+  id                  String     @id @default(uuid())
+  slug                String     @unique
+  title               String
+  summary             String?    @db.Text
+  discipline          Discipline
+  segment             Segment
+  position            Int
+  published           Boolean    @default(false)
+  prerequisiteTrackId String?    @map("prerequisite_track_id")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  prerequisite Track?       @relation("TrackPrerequisite", fields: [prerequisiteTrackId], references: [id], onDelete: SetNull)
+  dependents   Track[]      @relation("TrackPrerequisite")
+  modules      Module[]
+  enrollments  Enrollment[]
+  projects     Project[]
+
+  @@index([segment, discipline, published])
+  @@map("tracks")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  trackId   String   @map("track_id")
+  title     String
+  summary   String?  @db.Text
+  position  Int
+  published Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  track   Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@unique([trackId, position])
+  @@map("modules")
+}
+
+model Exercise {
+  id           String   @id @default(uuid())
+  lessonId     String   @map("lesson_id")
+  position     Int
+  prompt       String   @db.Text
+  starterCode  String?  @db.Text @map("starter_code")
+  solutionCode String?  @db.Text @map("solution_code")
+  tests        Json
+  hints        Json?
+  points       Int      @default(10)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  lesson  Lesson    @relation(fields: [lessonId], references: [lessonId], onDelete: Cascade)
+  attempts Attempt[]
+
+  @@unique([lessonId, position])
+  @@map("exercises")
+}
+
+model QuizQuestion {
+  id               String   @id @default(uuid())
+  lessonId         String   @map("lesson_id")
+  position         Int
+  prompt           String   @db.Text
+  choices          Json
+  correctChoiceIds Json     @map("correct_choice_ids")
+  explanation      String?  @db.Text
+  points           Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  lesson Lesson @relation(fields: [lessonId], references: [lessonId], onDelete: Cascade)
+
+  @@unique([lessonId, position])
+  @@map("quiz_questions")
+}
+
+model Attempt {
+  id         String        @id @default(uuid())
+  userId     String        @map("user_id")
+  lessonId   String        @map("lesson_id")
+  exerciseId String?       @map("exercise_id")
+  payload    Json
+  score      Int
+  maxScore   Int           @map("max_score")
+  status     AttemptStatus
+  feedback   Json?
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson   Lesson    @relation(fields: [lessonId], references: [lessonId], onDelete: Cascade)
+  exercise Exercise? @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, lessonId, createdAt(sort: Desc)])
+  @@map("attempts")
+}
+
+model Project {
+  id        String   @id @default(uuid())
+  lessonId  String?  @map("lesson_id")
+  trackId   String?  @map("track_id")
+  title     String
+  brief     String   @db.Text
+  rubric    Json
+  published Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lesson      Lesson?             @relation(fields: [lessonId], references: [lessonId], onDelete: SetNull)
+  track       Track?              @relation(fields: [trackId], references: [id], onDelete: SetNull)
+  submissions ProjectSubmission[]
+
+  @@index([trackId, published])
+  @@map("projects")
+}
+
+model ProjectSubmission {
+  id          String        @id @default(uuid())
+  projectId   String        @map("project_id")
+  userId      String        @map("user_id")
+  repoUrl     String?       @map("repo_url")
+  notebookUrl String?       @map("notebook_url")
+  notes       String?       @db.Text
+  status      AttemptStatus @default(PENDING_REVIEW)
+  score       Int?
+  reviewerId  String?       @map("reviewer_id")
+  reviewedAt  DateTime?     @map("reviewed_at")
+  submittedAt DateTime      @default(now()) @map("submitted_at")
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user     User    @relation("ProjectAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User?   @relation("ProjectReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, submittedAt(sort: Desc)])
+  @@index([status, submittedAt])
+  @@map("project_submissions")
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  label       String
+  description String   @db.Text
+  rule        Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  users UserBadge[]
+
+  @@map("badges")
+}
+
+model UserBadge {
+  userId    String   @map("user_id")
+  badgeId   String   @map("badge_id")
+  awardedAt DateTime @default(now()) @map("awarded_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+  @@map("user_badges")
 }
 
 /* ---------- Attestations NOAI / Bootcamp IOAI ---------- */

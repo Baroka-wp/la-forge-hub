@@ -6,6 +6,14 @@ function youtubeIdOk(id) {
   return typeof id === 'string' && /^[a-zA-Z0-9_-]{6,}$/.test(id.trim());
 }
 
+const LESSON_KINDS = new Set(['VIDEO', 'READING', 'EXERCISE', 'QUIZ', 'PROJECT']);
+
+function optionalText(value, maxLength = 100_000) {
+  if (value === null || value === undefined || value === '') return null;
+  const cleaned = String(value).trim();
+  return cleaned && cleaned.length <= maxLength ? cleaned : null;
+}
+
 /** POST créer une leçon (position = fin du cours si omis) */
 export async function createLesson(req, res) {
   setCors(res);
@@ -22,7 +30,8 @@ export async function createLesson(req, res) {
     const body = await readJsonBody(req);
     const courseSlug = (body.courseSlug || 'formation-ia').trim();
     const title = (body.title || '').trim();
-    const youtubeId = (body.youtubeId || '').trim();
+    const kind = String(body.kind || 'VIDEO').toUpperCase();
+    const youtubeId = optionalText(body.youtubeId, 200);
     const tag = (body.tag || 'ml').trim();
     let collabUrl = body.collabUrl != null ? String(body.collabUrl).trim() : '';
     collabUrl = collabUrl || null;
@@ -30,7 +39,12 @@ export async function createLesson(req, res) {
     description = description || null;
 
     if (!title) return sendJson(res, 400, { error: 'title requis' });
-    if (!youtubeIdOk(youtubeId)) return sendJson(res, 400, { error: 'youtubeId invalide' });
+    if (!LESSON_KINDS.has(kind)) return sendJson(res, 400, { error: 'kind invalide' });
+    if (kind === 'VIDEO' && !youtubeIdOk(youtubeId)) return sendJson(res, 400, { error: 'youtubeId invalide' });
+    const durationMin = body.durationMin == null ? null : Number(body.durationMin);
+    if (durationMin !== null && (!Number.isInteger(durationMin) || durationMin < 1)) {
+      return sendJson(res, 400, { error: 'durationMin invalide' });
+    }
 
     const agg = await prisma.lesson.aggregate({
       where: { courseSlug },
@@ -54,7 +68,12 @@ export async function createLesson(req, res) {
         position,
         title,
         description,
-        youtubeId,
+        moduleId: optionalText(body.moduleId, 100),
+        kind,
+        youtubeId: kind === 'VIDEO' ? youtubeId : null,
+        bodyMarkdown: optionalText(body.bodyMarkdown),
+        durationMin,
+        published: body.published !== false,
         tag,
         collabUrl,
         recordedAt: body.recordedAt ? new Date(body.recordedAt) : null,
@@ -84,12 +103,22 @@ export async function patchLesson(req, res) {
     if (!lessonId) return sendJson(res, 400, { error: 'lessonId manquant' });
     const body = await readJsonBody(req);
 
+    const existing = await prisma.lesson.findUnique({
+      where: { lessonId },
+      select: { kind: true, youtubeId: true },
+    });
+    if (!existing) return sendJson(res, 404, { error: 'Leçon introuvable' });
+
     const data = {};
     if (body.title != null) data.title = String(body.title).trim();
     if (body.youtubeId != null) {
       const y = String(body.youtubeId).trim();
-      if (!youtubeIdOk(y)) return sendJson(res, 400, { error: 'youtubeId invalide' });
-      data.youtubeId = y;
+      data.youtubeId = y || null;
+    }
+    if (body.kind != null) {
+      const kind = String(body.kind).toUpperCase();
+      if (!LESSON_KINDS.has(kind)) return sendJson(res, 400, { error: 'kind invalide' });
+      data.kind = kind;
     }
     if (body.tag != null) data.tag = String(body.tag).trim();
     if (body.position != null) data.position = Number(body.position);
@@ -101,10 +130,29 @@ export async function patchLesson(req, res) {
       const d = body.description != null ? String(body.description).trim() : '';
       data.description = d || null;
     }
+    if ('moduleId' in body) data.moduleId = optionalText(body.moduleId, 100);
+    if ('bodyMarkdown' in body) data.bodyMarkdown = optionalText(body.bodyMarkdown);
+    if ('durationMin' in body) {
+      const durationMin = body.durationMin == null ? null : Number(body.durationMin);
+      if (durationMin !== null && (!Number.isInteger(durationMin) || durationMin < 1)) {
+        return sendJson(res, 400, { error: 'durationMin invalide' });
+      }
+      data.durationMin = durationMin;
+    }
+    if ('published' in body) {
+      if (typeof body.published !== 'boolean') return sendJson(res, 400, { error: 'published invalide' });
+      data.published = body.published;
+    }
     if (body.recordedAt != null) data.recordedAt = body.recordedAt ? new Date(body.recordedAt) : null;
 
     if (Object.keys(data).length === 0) {
       return sendJson(res, 400, { error: 'Aucun champ à mettre à jour' });
+    }
+
+    const finalKind = data.kind || existing.kind;
+    const finalYoutubeId = 'youtubeId' in data ? data.youtubeId : existing.youtubeId;
+    if (finalKind === 'VIDEO' && !youtubeIdOk(finalYoutubeId)) {
+      return sendJson(res, 400, { error: 'Une leçon vidéo exige un youtubeId valide' });
     }
 
     const row = await prisma.lesson.update({

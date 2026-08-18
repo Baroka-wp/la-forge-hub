@@ -15,11 +15,18 @@ export default async function lessonsHandler(req, res) {
     return sendJson(res, 405, { error: 'Méthode non autorisée' });
   }
   try {
-    const q = (req.url || '').split('?')[1] || '';
+    const q = (req.originalUrl || req.url || '').split('?')[1] || '';
     const params = new URLSearchParams(q);
-    const course = params.get('course') || 'formation-ia';
+    const course = String(req.query?.course || params.get('course') || 'formation-ia');
     const rows = await prisma.lesson.findMany({
-      where: { courseSlug: course },
+      where: {
+        courseSlug: course,
+        published: true,
+        OR: [
+          { moduleId: null },
+          { module: { is: { published: true, track: { published: true } } } },
+        ],
+      },
       orderBy: { position: 'asc' },
     });
     const lessons = rows.map((r) => ({
@@ -29,8 +36,13 @@ export default async function lessonsHandler(req, res) {
       title: r.title,
       description: r.description ?? null,
       youtubeId: r.youtubeId,
+      kind: r.kind,
+      moduleId: r.moduleId,
+      durationMin: r.durationMin,
+      published: r.published,
+      bodyMarkdown: r.bodyMarkdown,
       tag: r.tag,
-      url: `https://youtu.be/${r.youtubeId}`,
+      url: r.youtubeId ? `https://youtu.be/${r.youtubeId}` : null,
       recordedAt: r.recordedAt ? r.recordedAt.toISOString() : null,
       collabUrl: r.collabUrl || null,
     }));
