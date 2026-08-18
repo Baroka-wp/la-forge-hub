@@ -1,6 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="La Forge Hub">
-  <rect width="32" height="32" rx="8" fill="#173d3a"/>
-  <path d="M5.5 10c4.3 0 7.8.9 10.5 2.8 2.9-1.9 6.4-2.8 10.5-2.8v13c-4.1 0-7.6.9-10.5 2.8C13.1 23.9 9.6 23 5.5 23V10Z" fill="none" stroke="#fffdf8" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M16 12.8v13M9.5 17h3M19.5 17h3" fill="none" stroke="#fffdf8" stroke-width="2" stroke-linecap="round"/>
-  <path d="m25 4 1 2.2 2.2 1L26 8l-1 2.3-1-2.3-2.2-.8 2.2-1L25 4Z" fill="#e7a15e"/>
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#18385B"/><stop offset=".62" stop-color="#17535D"/><stop offset="1" stop-color="#12605F"/></linearGradient></defs>
+  <rect width="32" height="32" rx="8" fill="url(#g)"/>
+  <rect x="8" y="15" width="16" height="3.5" rx="1" fill="#fff"/>
+  <rect x="12" y="18.5" width="8" height="3" rx="1" fill="#fff" opacity=".82"/>
+  <rect x="9.5" y="21.5" width="13" height="3" rx="1" fill="#fff"/>
+  <rect x="14.5" y="7" width="3" height="3" rx=".8" fill="#5FD9A6"/>
+  <rect x="19" y="10" width="2.5" height="2.5" rx=".7" fill="#18A16C"/>
 </svg>

@@ -21,12 +21,15 @@ import {
 } from './api.js';
 import { COURSE, PLATFORM_BRAND, TAG_LABELS } from './seed-data.js';
 
-/** Marque La Forge : un livre ouvert qui devient une enclume, avec une étincelle. */
+/** Marque La Forge : une enclume construite en blocs et ses étincelles pixel. */
 const BRAND_MARK_SVG = `
-<svg class="landing-hero-mascot" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <path d="M8 14.5c6.4 0 11.7 1.4 16 4.2 4.3-2.8 9.6-4.2 16-4.2v19.2c-6.2 0-11.5 1.4-16 4.3-4.5-2.9-9.8-4.3-16-4.3V14.5Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-  <path d="M24 18.7V38M14 25h5M29 25h5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-  <path d="m38.5 6 1.2 3.2L43 10.5l-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.3L38.5 6Z" fill="#e7a15e"/>
+<svg class="landing-hero-mascot" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <rect x="16" y="30" width="32" height="7" rx="2" fill="currentColor"/>
+  <rect x="24" y="37" width="16" height="6" rx="2" fill="currentColor" opacity=".76"/>
+  <rect x="19" y="43" width="26" height="6" rx="2" fill="currentColor"/>
+  <rect x="29" y="14" width="6" height="6" rx="1.6" fill="#5FD9A6"/>
+  <rect x="38" y="20" width="5" height="5" rx="1.4" fill="#18A16C"/>
+  <rect x="21" y="21" width="4" height="4" rx="1.2" fill="#5FD9A6" opacity=".72"/>
 </svg>`;
 import {
   renderAdminOverviewHtml,
@@ -217,6 +220,7 @@ function shell(content, opts = {}) {
         </div>`
     : '';
   return `
+    <a class="skip-link" href="#main-content">Aller au contenu</a>
     <header class="site-header">
       <div class="header-inner">
         <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-expanded="false" aria-controls="navDrawerPanel" aria-label="Ouvrir le menu">
@@ -226,7 +230,7 @@ function shell(content, opts = {}) {
           <span class="brand-mark" aria-hidden="true">
             ${BRAND_MARK_SVG.replace('landing-hero-mascot', 'brand-mark-svg')}
           </span>
-          <span class="brand-lockup"><span class="brand-text">LA FORGE</span><span class="brand-tagline">Hub d’apprentissage</span></span>
+          <span class="brand-lockup"><span class="brand-text">LA FORGE <em>HUB</em></span><span class="brand-tagline">Apprendre · Construire · Créer</span></span>
         </a>
         <nav class="nav-main nav-main--desktop" aria-label="Navigation principale">
           <a data-router href="/course/${COURSE.slug}" class="nav-main-primary">Parcours</a>
@@ -261,7 +265,7 @@ function shell(content, opts = {}) {
         ${drawerAccountBlock}
       </div>
     </div>
-    <main class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
+    <main id="main-content" class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
     <footer class="site-footer">
       <div class="site-footer-cols">
         <div class="site-footer-col">
