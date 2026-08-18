@@ -1,0 +1,30 @@
+name: Reset attestation test activity
+
+on:
+  workflow_dispatch:
+    inputs:
+      table_numbers:
+        description: "Numéros séparés par des virgules (ex. 084,153)"
+        required: true
+        type: string
+
+jobs:
+  reset-activity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reset targeted request and download data
+        env:
+          IMPORT_TOKEN: ${{ secrets.ATTESTATIONS_IMPORT_TOKEN }}
+          TABLE_NUMBERS: ${{ inputs.table_numbers }}
+        run: |
+          if [ -z "$IMPORT_TOKEN" ]; then
+            echo "Missing ATTESTATIONS_IMPORT_TOKEN" >&2
+            exit 1
+          fi
+          payload=$(jq -n --arg values "$TABLE_NUMBERS" \
+            '{action:"resetActivity", tableNumbers:($values | split(",") | map(gsub("^\\s+|\\s+$"; "")))}')
+          curl -fsS -X POST \
+            -H "Content-Type: application/json" \
+            -H "X-Attestations-Import-Token: $IMPORT_TOKEN" \
+            --data "$payload" \
+            https://laforge-hub.com/api/admin/attestations/import | jq .

@@ -90,6 +90,57 @@ async function importStatus() {
   return { participants, certificates, ready };
 }
 
+function normalizeTableNumbers(values) {
+  if (!Array.isArray(values) || values.length === 0 || values.length > 20) {
+    throw new Error('Liste de numéros invalide');
+  }
+  const tableNumbers = [...new Set(values.map((value) => {
+    const raw = String(value || '').trim().toUpperCase();
+    const normalized = /^\d{1,3}$/.test(raw) ? `NOAI_26_${raw.padStart(3, '0')}` : raw;
+    if (!/^NOAI_26_\d{3}$/.test(normalized)) throw new Error(`Numéro de table invalide : ${raw}`);
+    return normalized;
+  }))];
+  return tableNumbers;
+}
+
+/** Nettoyage ciblé des essais avant ouverture publique. Les fichiers restent intacts. */
+async function resetActivity(body) {
+  const tableNumbers = normalizeTableNumbers(body.tableNumbers);
+  const participants = await prisma.participant.findMany({
+    where: { tableNumber: { in: tableNumbers } },
+    select: { id: true, tableNumber: true, certificates: { select: { id: true } } },
+  });
+  const certificateIds = participants.flatMap((participant) => participant.certificates.map((certificate) => certificate.id));
+
+  const result = await prisma.$transaction(async (tx) => {
+    const downloads = certificateIds.length
+      ? await tx.certificateDownload.deleteMany({ where: { certificateId: { in: certificateIds } } })
+      : { count: 0 };
+    if (certificateIds.length) {
+      await tx.certificate.updateMany({ where: { id: { in: certificateIds } }, data: { downloadCount: 0 } });
+    }
+    const participantUpdates = await tx.participant.updateMany({
+      where: { tableNumber: { in: tableNumbers } },
+      data: {
+        email: null,
+        phone: null,
+        declaredName: null,
+        requestCount: 0,
+        firstRequestAt: null,
+        lastRequestAt: null,
+      },
+    });
+    const requests = await tx.certificateRequest.deleteMany({ where: { tableNumber: { in: tableNumbers } } });
+    return { downloads: downloads.count, participants: participantUpdates.count, requests: requests.count };
+  });
+
+  return {
+    tableNumbers,
+    foundParticipants: participants.map((participant) => participant.tableNumber),
+    reset: result,
+  };
+}
+
 export default async function adminAttestationsImport(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
   if (req.method !== 'POST') return sendJson(res, 405, { error: 'Méthode non autorisée' });
@@ -100,6 +151,7 @@ export default async function adminAttestationsImport(req, res) {
     if (body.action === 'seed') return sendJson(res, 200, { ok: true, ...(await seedParticipants()) });
     if (body.action === 'file') return sendJson(res, 200, { ok: true, ...(await importFile(body)) });
     if (body.action === 'status') return sendJson(res, 200, { ok: true, ...(await importStatus()) });
+    if (body.action === 'resetActivity') return sendJson(res, 200, { ok: true, ...(await resetActivity(body)) });
     return sendJson(res, 400, { error: 'Action invalide' });
   } catch (error) {
     console.error('[attestations-import]', error);
