@@ -31,6 +31,7 @@ import {
 import { lookupCertificates, getCertificateFile } from '../api/attestations.js';
 import adminAttestationsImport from '../api/admin-attestations-import.js';
 import attestationsSupport from '../api/attestations-support.js';
+import adminAttestations from '../api/admin-attestations.js';
 import {
   adminListMarketingContacts,
   adminCreateMarketingContact,
@@ -97,4 +98,5 @@ export function registerApiRoutes(app) {
   app.get('/api/attestations/file', (req, res) => getCertificateFile(req, res));
   app.post('/api/attestations/support', (req, res) => attestationsSupport(req, res));
   app.post('/api/admin/attestations/import', (req, res) => adminAttestationsImport(req, res));
+  app.get('/api/admin/attestations', (req, res) => adminAttestations(req, res));
 }

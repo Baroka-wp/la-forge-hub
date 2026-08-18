@@ -481,7 +481,32 @@ export async function fetchAdminOverview() {
   const r = await apiFetch('/api/admin/overview', { method: 'GET' });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) return { ok: false, error: data.error || r.statusText };
-  return { ok: true, userCount: data.userCount, lessonCount: data.lessonCount, adminCount: data.adminCount };
+  return {
+    ok: true,
+    userCount: data.userCount,
+    lessonCount: data.lessonCount,
+    adminCount: data.adminCount,
+    webinarCount: data.webinarCount,
+    participantCount: data.participantCount,
+    certificateCount: data.certificateCount,
+    downloadCount: data.downloadCount,
+  };
+}
+
+/**
+ * @param {{ page?: number, pageSize?: number, q?: string, kind?: string, status?: string }} [params]
+ */
+export async function fetchAdminAttestations(params = {}) {
+  if (!neonMode()) return { ok: false, participants: [], totals: {} };
+  const sp = new URLSearchParams();
+  for (const key of ['page', 'pageSize', 'q', 'kind', 'status']) {
+    if (params[key] != null && params[key] !== '') sp.set(key, String(params[key]));
+  }
+  const qs = sp.toString();
+  const r = await apiFetch(`/api/admin/attestations${qs ? `?${qs}` : ''}`, { method: 'GET' });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: data.error || r.statusText, participants: [], totals: {} };
+  return { ok: true, ...data };
 }
 
 /**

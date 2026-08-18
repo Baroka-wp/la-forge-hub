@@ -35,12 +35,16 @@ export async function overview(req, res) {
   try {
     const auth = await requireAdmin(req);
     if (auth.error) return sendJson(res, auth.status, { error: auth.error });
-    const [userCount, lessonCount, adminCount] = await Promise.all([
+    const [userCount, lessonCount, adminCount, webinarCount, participantCount, certificateCount, downloadCount] = await Promise.all([
       prisma.user.count(),
       prisma.lesson.count({ where: { courseSlug: 'formation-ia' } }),
       prisma.user.count({ where: { role: 'admin' } }),
+      prisma.webinar.count(),
+      prisma.participant.count(),
+      prisma.certificate.count(),
+      prisma.certificateDownload.count(),
     ]);
-    return sendJson(res, 200, { userCount, lessonCount, adminCount });
+    return sendJson(res, 200, { userCount, lessonCount, adminCount, webinarCount, participantCount, certificateCount, downloadCount });
   } catch (e) {
     console.error(e);
     return sendJson(res, 500, { error: e.message || 'Erreur serveur' });

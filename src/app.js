@@ -21,27 +21,12 @@ import {
 } from './api.js';
 import { COURSE, PLATFORM_BRAND, TAG_LABELS } from './seed-data.js';
 
-/** Mascotte LA FORGE-HUB (alignée sur le header / loader) — ids uniques pour le hero. */
-const LANDING_HERO_MASCOT_SVG = `
-<svg class="landing-hero-mascot" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-  <defs>
-    <linearGradient id="landingHeroMascotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98" />
-      <stop offset="100%" stop-color="#eef2ff" stop-opacity="0.96" />
-    </linearGradient>
-  </defs>
-  <line x1="20" y1="7" x2="20" y2="11" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round" />
-  <circle cx="20" cy="5" r="3.2" fill="url(#landingHeroMascotGrad)" />
-  <circle cx="20" cy="5" r="1.2" fill="#2444eb" opacity="0.32" />
-  <ellipse cx="20" cy="23" rx="14" ry="12.5" fill="url(#landingHeroMascotGrad)" />
-  <ellipse cx="14" cy="17" rx="5" ry="3" fill="#fff" opacity="0.42" />
-  <ellipse cx="13.5" cy="21" rx="3.2" ry="4" fill="#1e2d5c" />
-  <ellipse cx="26.5" cy="21" rx="3.2" ry="4" fill="#1e2d5c" />
-  <ellipse cx="14.5" cy="19.5" rx="1.1" ry="1.4" fill="#fff" />
-  <ellipse cx="27.5" cy="19.5" rx="1.1" ry="1.4" fill="#fff" />
-  <ellipse cx="9" cy="25" rx="2.8" ry="1.6" fill="#ff9eb5" opacity="0.78" />
-  <ellipse cx="31" cy="25" rx="2.8" ry="1.6" fill="#ff9eb5" opacity="0.78" />
-  <path d="M15.5 27.5 Q20 31.5 24.5 27.5" fill="none" stroke="#1e2d5c" stroke-width="1.35" stroke-linecap="round" />
+/** Marque La Forge : un livre ouvert qui devient une enclume, avec une étincelle. */
+const BRAND_MARK_SVG = `
+<svg class="landing-hero-mascot" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <path d="M8 14.5c6.4 0 11.7 1.4 16 4.2 4.3-2.8 9.6-4.2 16-4.2v19.2c-6.2 0-11.5 1.4-16 4.3-4.5-2.9-9.8-4.3-16-4.3V14.5Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M24 18.7V38M14 25h5M29 25h5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+  <path d="m38.5 6 1.2 3.2L43 10.5l-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.3L38.5 6Z" fill="#e7a15e"/>
 </svg>`;
 import {
   renderAdminOverviewHtml,
@@ -60,6 +45,7 @@ import {
   renderAdminWebinarDetailHtml,
   bindAdminWebinarDetailPage,
 } from './admin-webinars.js';
+import { renderAdminAttestationsHtml, bindAdminAttestationsPage } from './admin-attestations.js';
 import {
   renderWebinarsPageHtml,
   renderWebinarDetailHtml,
@@ -112,6 +98,7 @@ function matchRoute() {
       if (parts.length === 3) return { name: 'admin-user-detail', id: parts[2] };
     }
     if (parts[1] === 'crm') return { name: 'admin-crm' };
+    if (parts[1] === 'attestations') return { name: 'admin-attestations' };
     if (parts[1] === 'webinars') {
       if (parts.length === 2) return { name: 'admin-webinars' };
       if (parts.length === 3) return { name: 'admin-webinar-detail', id: parts[2] };
@@ -235,34 +222,15 @@ function shell(content, opts = {}) {
         <button type="button" class="nav-menu-toggle" id="navMenuToggle" aria-expanded="false" aria-controls="navDrawerPanel" aria-label="Ouvrir le menu">
           <span class="nav-menu-toggle-bars" aria-hidden="true"></span>
         </button>
-        <a data-router href="/" class="brand">
+        <a data-router href="/" class="brand" aria-label="Accueil La Forge Hub">
           <span class="brand-mark" aria-hidden="true">
-            <svg class="brand-mark-svg" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" focusable="false">
-              <defs>
-                <linearGradient id="brandMascotFace" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98" />
-                  <stop offset="100%" stop-color="#eef2ff" stop-opacity="0.96" />
-                </linearGradient>
-              </defs>
-              <line x1="20" y1="7" x2="20" y2="11" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round" />
-              <circle cx="20" cy="5" r="3.2" fill="url(#brandMascotFace)" />
-              <circle cx="20" cy="5" r="1.2" fill="#2444eb" opacity="0.32" />
-              <ellipse cx="20" cy="23" rx="14" ry="12.5" fill="url(#brandMascotFace)" />
-              <ellipse cx="14" cy="17" rx="5" ry="3" fill="#fff" opacity="0.42" />
-              <ellipse cx="13.5" cy="21" rx="3.2" ry="4" fill="#1e2d5c" />
-              <ellipse cx="26.5" cy="21" rx="3.2" ry="4" fill="#1e2d5c" />
-              <ellipse cx="14.5" cy="19.5" rx="1.1" ry="1.4" fill="#fff" />
-              <ellipse cx="27.5" cy="19.5" rx="1.1" ry="1.4" fill="#fff" />
-              <ellipse cx="9" cy="25" rx="2.8" ry="1.6" fill="#ff9eb5" opacity="0.78" />
-              <ellipse cx="31" cy="25" rx="2.8" ry="1.6" fill="#ff9eb5" opacity="0.78" />
-              <path d="M15.5 27.5 Q20 31.5 24.5 27.5" fill="none" stroke="#1e2d5c" stroke-width="1.35" stroke-linecap="round" />
-            </svg>
+            ${BRAND_MARK_SVG.replace('landing-hero-mascot', 'brand-mark-svg')}
           </span>
-          <span class="brand-text">${escapeHtml(PLATFORM_BRAND)}</span>
+          <span class="brand-lockup"><span class="brand-text">LA FORGE</span><span class="brand-tagline">Hub d’apprentissage</span></span>
         </a>
         <nav class="nav-main nav-main--desktop" aria-label="Navigation principale">
-          <a data-router href="/webinars" class="nav-main-primary">Formations Pro</a>
-          <a data-router href="/course/${COURSE.slug}" class="nav-main-secondary">Formation IA</a>
+          <a data-router href="/course/${COURSE.slug}" class="nav-main-primary">Parcours</a>
+          <a data-router href="/webinars" class="nav-main-secondary">Ateliers &amp; replays</a>
         </nav>
         ${
           user
@@ -287,8 +255,8 @@ function shell(content, opts = {}) {
         <h2 id="navDrawerTitle" class="nav-drawer-title">Menu de navigation</h2>
         <button type="button" class="nav-drawer-close" id="navDrawerClose" aria-label="Fermer le menu">×</button>
         <nav class="nav-drawer-links" aria-label="Navigation principale">
-          <a data-router href="/webinars">Formations Pro</a>
-          <a data-router href="/course/${COURSE.slug}">Formation IA</a>
+          <a data-router href="/course/${COURSE.slug}">Parcours</a>
+          <a data-router href="/webinars">Ateliers &amp; replays</a>
         </nav>
         ${drawerAccountBlock}
       </div>
@@ -298,15 +266,15 @@ function shell(content, opts = {}) {
       <div class="site-footer-cols">
         <div class="site-footer-col">
           <p class="site-footer-brand"><strong>${escapeHtml(PLATFORM_BRAND)}</strong></p>
-          <p class="site-footer-tagline">Formations Pro &amp; conférences pour les passionnés de tech.</p>
+          <p class="site-footer-tagline">Apprendre l’IA, les maths et le code à son rythme.</p>
         </div>
         <div class="site-footer-col">
-          <p class="site-footer-col-title">Formations Pro</p>
+          <p class="site-footer-col-title">Ateliers</p>
           <a data-router href="/webinars">Toutes les sessions</a>
           <a data-router href="/webinars#replays">Replays</a>
         </div>
         <div class="site-footer-col">
-          <p class="site-footer-col-title">Formations</p>
+          <p class="site-footer-col-title">Apprendre</p>
           <a data-router href="/course/${COURSE.slug}">Parcours ${escapeHtml(COURSE.title)}</a>
         </div>
         <div class="site-footer-col">
@@ -358,7 +326,7 @@ function renderLandingHeroHtml({ title, lead, points, ctaBlock }) {
         <div class="landing-hero-inner">
           <div class="landing-hero-visual">
             <div class="landing-hero-logo-ring">
-              ${LANDING_HERO_MASCOT_SVG}
+              ${BRAND_MARK_SVG}
             </div>
             <p class="landing-hero-brand-name">${escapeHtml(PLATFORM_BRAND)}</p>
             <p class="landing-hero-brand-tagline">${escapeHtml(COURSE.subtitle)}</p>
@@ -413,7 +381,6 @@ async function render() {
         title: `${PLATFORM_BRAND} — Formations Pro & conférences tech`,
         description: DEFAULT_SITE_DESCRIPTION,
       });
-      bindHomeCountdown();
       bindHomeOptinForm();
     } else if (route.name === 'login') {
       app.innerHTML = shell(renderAuth('login'), {
@@ -536,6 +503,7 @@ async function render() {
     route.name === 'admin-users' ||
     route.name === 'admin-user-detail' ||
     route.name === 'admin-crm' ||
+    route.name === 'admin-attestations' ||
     route.name === 'admin-webinars' ||
     route.name === 'admin-webinar-detail'
   ) {
@@ -579,6 +547,12 @@ async function render() {
     } else if (route.name === 'admin-crm') {
       app.innerHTML = shell(await renderAdminCrmHtml(currentUser), { title: `Admin — CRM — ${PLATFORM_BRAND}`, admin: true });
       bindAdminCrmPage();
+    } else if (route.name === 'admin-attestations') {
+      app.innerHTML = shell(await renderAdminAttestationsHtml(currentUser), {
+        title: `Admin — Attestations — ${PLATFORM_BRAND}`,
+        admin: true,
+      });
+      bindAdminAttestationsPage();
     } else if (route.name === 'admin-webinars') {
       app.innerHTML = shell(await renderAdminWebinarsHtml(currentUser), { title: `Admin — Webinaires — ${PLATFORM_BRAND}`, admin: true });
       bindAdminWebinarsPage({ navigate });
@@ -714,100 +688,11 @@ function renderHomeWebinarCard(w, variant = 'event') {
     </a>`;
 }
 
-function renderHomeHero({ webinar, mode }) {
-  /** mode = 'upcoming' | 'replay-fallback' */
-  if (!webinar) {
-    return `
-      <section class="home-hero home-hero--empty">
-        <div class="home-hero-inner">
-          <p class="home-hero-eyebrow">${escapeHtml(PLATFORM_BRAND)}</p>
-          <h1 class="h1 home-hero-title">Formations Pro, en direct et en replay.</h1>
-          <p class="home-hero-lead">Aucune session programmée pour l’instant. Inscrivez-vous pour être prévenu·e de la prochaine.</p>
-          <div class="home-hero-cta">
-            <a data-router class="btn btn-primary btn-lg" href="/webinars">Explorer les replays</a>
-          </div>
-        </div>
-      </section>`;
-  }
-
-  const isReplay = mode === 'replay-fallback';
-  const eyebrow = isReplay ? 'Replay à la une' : 'Prochain rendez-vous';
-  const date = webinar.startsAt ? formatWebinarDateLong(webinar.startsAt) : '';
-  const countdown = !isReplay && webinar.startsAt
-    ? `<div class="home-hero-countdown" data-countdown-target="${escapeHtml(webinar.startsAt)}" aria-live="polite">
-        <div class="home-hero-countdown-cell"><span data-cd="d">--</span><small>jours</small></div>
-        <div class="home-hero-countdown-cell"><span data-cd="h">--</span><small>heures</small></div>
-        <div class="home-hero-countdown-cell"><span data-cd="m">--</span><small>min</small></div>
-        <div class="home-hero-countdown-cell"><span data-cd="s">--</span><small>sec</small></div>
-      </div>`
-    : '';
-  const cta = isReplay
-    ? `<a data-router class="btn btn-primary btn-lg" href="/webinars/${escapeHtml(webinar.id)}">Regarder le replay</a>
-       <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir tous les replays</a>`
-    : `<a data-router class="btn btn-primary btn-lg" href="/webinars/${escapeHtml(webinar.id)}">Réserver ma place</a>
-       <a data-router class="btn btn-secondary btn-lg" href="/webinars">Voir toutes les formations Pro</a>`;
-  const tag = webinar.tag ? `<span class="home-hero-tag">${escapeHtml(webinar.tag)}</span>` : '';
-  const dateLine = date ? `<p class="home-hero-date">${escapeHtml(date)}</p>` : '';
-
-  return `
-    <section class="home-hero">
-      <div class="home-hero-inner">
-        <p class="home-hero-eyebrow">${escapeHtml(eyebrow)}</p>
-        <div class="home-hero-meta">${tag}${dateLine}</div>
-        <h1 class="h1 home-hero-title">${escapeHtml(webinar.title || '')}</h1>
-        <p class="home-hero-lead">${escapeHtml((webinar.description || '').slice(0, 200))}${(webinar.description || '').length > 200 ? '…' : ''}</p>
-        ${countdown}
-        <div class="home-hero-cta">${cta}</div>
-      </div>
-    </section>`;
-}
-
-function bindHomeCountdown() {
-  const root = document.querySelector('[data-countdown-target]');
-  if (!root) return;
-  const target = new Date(root.getAttribute('data-countdown-target')).getTime();
-  if (Number.isNaN(target)) return;
-  const cells = {
-    d: root.querySelector('[data-cd="d"]'),
-    h: root.querySelector('[data-cd="h"]'),
-    m: root.querySelector('[data-cd="m"]'),
-    s: root.querySelector('[data-cd="s"]'),
-  };
-  const tick = () => {
-    const diff = target - Date.now();
-    if (diff <= 0) {
-      cells.d.textContent = '0';
-      cells.h.textContent = '00';
-      cells.m.textContent = '00';
-      cells.s.textContent = '00';
-      clearInterval(timer);
-      return;
-    }
-    const d = Math.floor(diff / 86400000);
-    const h = Math.floor((diff % 86400000) / 3600000);
-    const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000);
-    cells.d.textContent = String(d);
-    cells.h.textContent = String(h).padStart(2, '0');
-    cells.m.textContent = String(m).padStart(2, '0');
-    cells.s.textContent = String(s).padStart(2, '0');
-  };
-  tick();
-  const timer = setInterval(tick, 1000);
-}
-
 async function renderHome() {
   const nextRes = await fetchNextWebinarEvent().catch(() => null);
   const next = nextRes?.webinar || null;
   const allRes = await fetchWebinars().catch(() => null);
   const all = Array.isArray(allRes?.webinars) ? allRes.webinars : [];
-  const now = Date.now();
-
-  const upcoming = all
-    .filter((w) => w.lifecycle === 'UPCOMING' && (!next || w.id !== next.id))
-    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
-    .slice(0, 3);
-
   const replays = all
     .filter((w) => w.lifecycle === 'REPLAY_READY')
     .sort((a, b) => {
@@ -818,41 +703,91 @@ async function renderHome() {
       const db = b.startsAt ? new Date(b.startsAt).getTime() : 0;
       return db - da;
     })
-    .slice(0, 4);
+    .slice(0, 3);
 
-  const heroWebinar = next || replays[0] || null;
-  const heroMode = next ? 'upcoming' : 'replay-fallback';
+  const tracks = [
+    { key: 'python', index: '01', title: 'Python', copy: 'Écrire ses premiers programmes et apprendre à raisonner comme un développeur.' },
+    { key: 'math', index: '02', title: 'Mathématiques', copy: 'Comprendre les outils mathématiques qui donnent du sens aux modèles.' },
+    { key: 'ml', index: '03', title: 'Machine Learning', copy: 'Entraîner, évaluer et améliorer ses premiers modèles prédictifs.' },
+    { key: 'dl', index: '04', title: 'Intelligence artificielle', copy: 'Explorer les réseaux de neurones et les usages responsables de l’IA.' },
+  ].map((track) => ({ ...track, count: sessions.filter((lesson) => lesson.tag === track.key).length }));
 
-  const upcomingSection = upcoming.length
-    ? `<section class="home-section">
-        <div class="home-section-head">
-          <h2 class="h2">Prochains rendez-vous</h2>
-          <a data-router href="/webinars" class="home-section-link">Tout voir →</a>
+  const primaryHref = currentUser ? '/dashboard' : `/course/${COURSE.slug}`;
+  const primaryLabel = currentUser ? 'Continuer mon parcours' : 'Découvrir le parcours';
+  const workshop = next || replays[0] || null;
+  const workshopMeta = workshop?.startsAt
+    ? (next ? formatWebinarDateLong(workshop.startsAt) : 'Replay disponible')
+    : 'Atelier en ligne';
+
+  const hero = `
+    <section class="lms-home-hero">
+      <div class="lms-home-hero-copy">
+        <p class="lms-kicker">Pour les collégiens et les lycéens</p>
+        <h1>Comprendre l’IA.<br><em>Construire avec.</em></h1>
+        <p class="lms-home-lead">La Forge Hub transforme les notions complexes en un chemin clair : mathématiques, Python, machine learning, intelligence artificielle et compétences humaines.</p>
+        <div class="lms-home-actions">
+          <a data-router class="btn btn-primary btn-lg" href="${primaryHref}">${primaryLabel}</a>
+          <a data-router class="lms-text-link" href="/webinars">Voir les ateliers <span aria-hidden="true">→</span></a>
         </div>
-        <div class="home-cards home-cards--3">
-          ${upcoming.map((w) => renderHomeWebinarCard(w, 'event')).join('')}
-        </div>
-      </section>`
-    : '';
+        <dl class="lms-home-proof" aria-label="Chiffres clés du parcours">
+          <div><dt>${sessions.length}</dt><dd>leçons guidées</dd></div>
+          <div><dt>5</dt><dd>domaines liés</dd></div>
+          <div><dt>À son rythme</dt><dd>progression enregistrée</dd></div>
+        </dl>
+      </div>
+      <div class="lms-home-map" aria-label="Carte du parcours">
+        <div class="lms-map-head"><span>Ton chemin d’apprentissage</span><span class="lms-map-status">Progressif</span></div>
+        ${tracks.map((track) => `<div class="lms-map-row"><span class="lms-map-index">${track.index}</span><strong>${track.title}</strong><span>${track.count} leçons</span></div>`).join('')}
+        <div class="lms-map-soft"><span>+</span><div><strong>Soft skills</strong><small>Communiquer, collaborer, présenter</small></div></div>
+      </div>
+    </section>`;
+
+  const tracksSection = `
+    <section class="lms-section" aria-labelledby="lmsTracksTitle">
+      <div class="lms-section-intro">
+        <p class="lms-kicker">Les fondamentaux</p>
+        <h2 id="lmsTracksTitle">Un seul parcours,<br>des compétences qui se répondent.</h2>
+        <p>Chaque domaine renforce les autres. Les mathématiques expliquent, Python permet d’expérimenter et le machine learning donne vie aux données.</p>
+      </div>
+      <div class="lms-track-grid">
+        ${tracks.map((track) => `<a data-router href="/course/${COURSE.slug}" class="lms-track-card lms-track-card--${track.key}">
+          <span class="lms-track-num">${track.index}</span>
+          <div><h3>${track.title}</h3><p>${track.copy}</p></div>
+          <span class="lms-track-count">${track.count} leçons <b aria-hidden="true">↗</b></span>
+        </a>`).join('')}
+      </div>
+    </section>`;
+
+  const methodSection = `
+    <section class="lms-method">
+      <div class="lms-method-quote"><p>“On apprend vraiment quand on comprend, quand on essaie et quand on sait expliquer.”</p><span>La méthode La Forge</span></div>
+      <ol class="lms-method-steps">
+        <li><span>01</span><div><strong>Comprendre</strong><p>Une explication guidée, sans jargon inutile.</p></div></li>
+        <li><span>02</span><div><strong>Pratiquer</strong><p>Des vidéos, notebooks et exercices concrets.</p></div></li>
+        <li><span>03</span><div><strong>Progresser</strong><p>Un espace personnel qui garde le fil.</p></div></li>
+      </ol>
+    </section>`;
 
   const replaysSection = replays.length
-    ? `<section class="home-section">
+    ? `<section class="home-section lms-workshops">
         <div class="home-section-head">
-          <h2 class="h2">Replays populaires</h2>
-          <a data-router href="/webinars#replays" class="home-section-link">Tout voir →</a>
+          <div><p class="lms-kicker">Savoir faire, savoir être</p><h2 class="h2">Ateliers &amp; compétences humaines</h2></div>
+          <a data-router href="/webinars#replays" class="home-section-link">Tous les ateliers →</a>
         </div>
-        <div class="home-cards home-cards--4">
+        <div class="home-cards home-cards--3">
           ${replays.map((w) => renderHomeWebinarCard(w, 'replay')).join('')}
         </div>
       </section>`
-    : '';
+    : workshop
+      ? `<section class="home-section lms-workshops"><div class="home-section-head"><div><p class="lms-kicker">Prochain atelier</p><h2 class="h2">${escapeHtml(workshop.title || '')}</h2><p>${escapeHtml(workshopMeta)}</p></div><a data-router href="/webinars/${escapeHtml(workshop.id)}" class="btn btn-primary">Découvrir</a></div></section>`
+      : '';
 
   const optinSection = `
     <section class="home-optin" id="alertes">
       <div class="home-optin-inner">
-        <p class="home-optin-eyebrow">Restez prévenu</p>
-        <h2 class="h2 home-optin-title">Ne ratez aucune prochaine formation</h2>
-        <p class="home-optin-lead">Recevez un e-mail à chaque nouvelle formation Pro ou conférence programmée. Pas de spam, juste les annonces.</p>
+        <p class="home-optin-eyebrow">Élèves, parents, enseignants</p>
+        <h2 class="h2 home-optin-title">Suivez les prochaines étapes de La Forge.</h2>
+        <p class="home-optin-lead">Recevez les nouveaux cours, ateliers et rendez-vous pédagogiques. Seulement l’essentiel.</p>
         <form id="homeOptinForm" class="home-optin-form" novalidate>
           <div class="home-optin-row">
             <input type="text" name="firstName" placeholder="Prénom" autocomplete="given-name" required />
@@ -867,30 +802,13 @@ async function renderHome() {
       </div>
     </section>`;
 
-  const aboutSection = `
-    <section class="home-about">
-      <div class="home-about-inner">
-        <div class="home-about-photo">
-          <img src="/baroka.jpg" alt="IROTORI Baroka" loading="lazy" onerror="this.style.display='none'" />
-        </div>
-        <div class="home-about-text">
-          <p class="home-about-eyebrow">Qui suis-je</p>
-          <h2 class="h2 home-about-title">IROTORI Baroka</h2>
-          <p class="home-about-lead">Créateur de La Forge Hub, ingénieur et formateur passionné de tech &amp; d’IA. Je conçois et anime ces formations pour transmettre ce que j’ai appris sur le terrain — code, architecture, intelligence artificielle, soft skills — et vous aider à monter en compétences concrètement.</p>
-          <div class="home-about-cta">
-            <a href="https://irotoribaroka.com/" target="_blank" rel="noopener noreferrer" class="btn btn-primary">Découvrir mon parcours et mes expériences ↗</a>
-          </div>
-        </div>
-      </div>
-    </section>`;
-
   return `
-    <div class="home-webinars">
-      ${renderHomeHero({ webinar: heroWebinar, mode: heroMode })}
-      ${upcomingSection}
-      ${optinSection}
+    <div class="home-webinars home-lms">
+      ${hero}
+      ${tracksSection}
+      ${methodSection}
       ${replaysSection}
-      ${aboutSection}
+      ${optinSection}
     </div>`;
 }
 
@@ -1109,9 +1027,9 @@ async function renderCourse() {
   const categories = new Set(sessions.map((s) => s.tag)).size;
 
   const courseHeroPoints = [
-    'Vidéos progressives · Python, données, machine learning & deep learning',
-    'Progression suivie, communauté par leçon, webinaires',
-    'Open & orienté pratique',
+    'Des vidéos progressives : Python, données, mathématiques et IA',
+    'Des notebooks pour essayer, se tromper et recommencer',
+    'Une progression enregistrée et une communauté par leçon',
   ];
 
   const courseCtaBlock = !currentUser
@@ -1150,7 +1068,7 @@ async function renderCourse() {
         <div class="stats-strip surface-low" id="courseStatsBar">
           <div class="stat"><div class="stat-num">${sessions.length}</div><div class="stat-label">sessions vidéo</div></div>
           <div class="stat"><div class="stat-num">${categories}</div><div class="stat-label">modules</div></div>
-          <div class="stat"><div class="stat-num">100%</div><div class="stat-label">open</div></div>
+          <div class="stat"><div class="stat-num">À son rythme</div><div class="stat-label">progression sauvegardée</div></div>
         </div>
         <div class="filter-bar" id="courseFilterBar">
           <button type="button" class="filter-btn active" data-filter="all">Tout</button>
@@ -1160,7 +1078,7 @@ async function renderCourse() {
           <button type="button" class="filter-btn" data-filter="dl">Deep Learning</button>
           <button type="button" class="filter-btn" data-filter="data">Data Analysis</button>
           <button type="button" class="filter-btn" data-filter="framework">Frameworks</button>
-          <button type="button" class="filter-btn" data-filter="review">Reviews</button>
+          <button type="button" class="filter-btn" data-filter="review">Révisions</button>
         </div>
         <div class="video-list" id="courseVideoList"></div>
         <div class="no-results" id="courseNoResults" style="display:none">Aucune session trouvée pour ce filtre.</div>
@@ -1207,41 +1125,51 @@ async function renderDashboard() {
   const pct = sessions.length ? Math.round((done / sessions.length) * 100) : 0;
   const lastIncomplete = sessions.find((s) => !progress[s.lessonId]?.completed);
   const webinarBanner = await getDashboardWebinarBannerHtml();
+  const dashboardTracks = [
+    { key: 'python', label: 'Python' },
+    { key: 'math', label: 'Mathématiques' },
+    { key: 'ml', label: 'Machine Learning' },
+    { key: 'dl', label: 'Intelligence artificielle' },
+    { key: 'data', label: 'Données' },
+  ].map((track) => {
+    const lessons = sessions.filter((session) => session.tag === track.key);
+    const completed = lessons.filter((lesson) => progress[lesson.lessonId]?.completed).length;
+    return { ...track, count: lessons.length, completed, percent: lessons.length ? Math.round((completed / lessons.length) * 100) : 0 };
+  });
+  const resumeHref = lastIncomplete
+    ? `/learn/${COURSE.slug}/${encodeURIComponent(lastIncomplete.lessonId)}`
+    : sessions[0]
+      ? `/learn/${COURSE.slug}/${encodeURIComponent(sessions[0].lessonId)}`
+      : `/course/${COURSE.slug}`;
 
   return `
-    <section class="panel surface-card">
-      <h1 class="h1">Mon espace</h1>
-      <p class="muted">Bonjour ${escapeHtml(currentUser.displayName || '')}</p>
+    <div class="learner-dashboard">
+      <header class="learner-dash-head">
+        <div><p class="lms-kicker">Mon espace d’apprentissage</p><h1>Bonjour ${escapeHtml(currentUser.displayName || '')}</h1><p>Retrouve ton fil, avance à ton rythme et vois ce que tu sais déjà faire.</p></div>
+        <a data-router class="btn btn-secondary" href="/course/${COURSE.slug}">Voir tout le parcours</a>
+      </header>
       ${webinarBanner}
-      <div class="dash-grid">
-        <div class="dash-card">
-          <div class="dash-ring" style="--p:${pct}"><span>${pct}%</span></div>
-          <p>Parcours complété</p>
+      <section class="learner-dash-main">
+        <article class="learner-resume-card">
+          <div class="learner-resume-top"><span>À continuer</span><span>${pct}% du parcours</span></div>
+          <h2>${escapeHtml(lastIncomplete?.title || 'Revoir le parcours depuis le début')}</h2>
+          <p>${done} leçons terminées sur ${sessions.length}. Chaque petite étape compte.</p>
+          <div class="learner-progress"><span style="width:${pct}%"></span></div>
+          <a data-router class="btn btn-primary" href="${resumeHref}">${lastIncomplete ? 'Reprendre cette leçon' : 'Revoir le parcours'}</a>
+        </article>
+        <aside class="learner-score-card"><div class="dash-ring" style="--p:${pct}"><span>${pct}%</span></div><strong>Progression globale</strong><p>${done} leçons maîtrisées</p></aside>
+      </section>
+      <section class="learner-domains" aria-labelledby="learnerDomainsTitle">
+        <div class="learner-section-head"><div><p class="lms-kicker">Tes domaines</p><h2 id="learnerDomainsTitle">Où en es-tu ?</h2></div><p>Une lecture simple de ta progression, matière par matière.</p></div>
+        <div class="learner-domain-grid">
+          ${dashboardTracks.map((track) => `<article class="learner-domain-card"><div><span>${track.label}</span><strong>${track.percent}%</strong></div><div class="learner-mini-progress"><span style="width:${track.percent}%"></span></div><p>${track.completed} / ${track.count} leçons</p></article>`).join('')}
         </div>
-        <div class="dash-card">
-          <div class="stat-num">${done}</div>
-          <p>Leçons terminées</p>
-        </div>
-        <div class="dash-card">
-          <div class="stat-num">${sessions.length}</div>
-          <p>Leçons au total</p>
-        </div>
-      </div>
-      <div class="dash-actions">
-        ${
-          lastIncomplete
-            ? `<a data-router class="btn btn-primary" href="/learn/${COURSE.slug}/${encodeURIComponent(lastIncomplete.lessonId)}">Reprendre la formation</a>`
-            : `<a data-router class="btn btn-primary" href="/learn/${COURSE.slug}/${encodeURIComponent(sessions[0].lessonId)}">Revoir le début</a>`
-        }
-        <a data-router class="btn btn-secondary" href="/course/${COURSE.slug}">Fiche du parcours</a>
-      </div>
-      <h2 class="h2 section-title">Profil</h2>
-      <form id="profileForm" class="form-inline">
-        <label>Nom affiché<input type="text" name="displayName" value="${escapeHtml(currentUser.displayName || '')}" /></label>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
-        <span id="profileMsg" class="muted"></span>
-      </form>
-    </section>
+      </section>
+      <details class="learner-profile">
+        <summary>Mes informations</summary>
+        <form id="profileForm" class="form-inline"><label>Nom affiché<input type="text" name="displayName" value="${escapeHtml(currentUser.displayName || '')}" /></label><button type="submit" class="btn btn-primary">Enregistrer</button><span id="profileMsg" class="muted"></span></form>
+      </details>
+    </div>
   `;
 }
 

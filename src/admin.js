@@ -59,8 +59,9 @@ function adminNav(active, user) {
       <nav class="admin-nav" aria-label="Navigation administration">
         <a data-router href="/admin" class="admin-nav-link ${active === 'overview' ? 'is-active' : ''}">Vue d’ensemble</a>
         <a data-router href="/admin/lessons" class="admin-nav-link ${active === 'lessons' ? 'is-active' : ''}">Leçons</a>
-        <a data-router href="/admin/webinars" class="admin-nav-link ${active === 'webinars' ? 'is-active' : ''}">Webinaires</a>
-        <a data-router href="/admin/users" class="admin-nav-link ${active === 'users' ? 'is-active' : ''}">Utilisateurs</a>
+        <a data-router href="/admin/webinars" class="admin-nav-link ${active === 'webinars' ? 'is-active' : ''}">Ateliers &amp; replays</a>
+        <a data-router href="/admin/attestations" class="admin-nav-link ${active === 'attestations' ? 'is-active' : ''}">Attestations</a>
+        <a data-router href="/admin/users" class="admin-nav-link ${active === 'users' ? 'is-active' : ''}">Apprenants</a>
         <a data-router href="/admin/crm" class="admin-nav-link ${active === 'crm' ? 'is-active' : ''}">Contacts (CRM)</a>
       </nav>
       <a data-router href="/" class="admin-back-link">← Retour au site</a>
@@ -92,8 +93,16 @@ export async function renderAdminOverviewHtml(user) {
           <span class="admin-stat-label">Leçons en base</span>
         </article>
         <article class="admin-stat-card surface-container-lowest">
-          <span class="admin-stat-num">${ov.adminCount}</span>
-          <span class="admin-stat-label">Administrateurs</span>
+          <span class="admin-stat-num">${ov.webinarCount ?? 0}</span>
+          <span class="admin-stat-label">Ateliers &amp; replays</span>
+        </article>
+        <article class="admin-stat-card surface-container-lowest">
+          <span class="admin-stat-num">${ov.participantCount ?? 0}</span>
+          <span class="admin-stat-label">Participants attestations</span>
+        </article>
+        <article class="admin-stat-card surface-container-lowest">
+          <span class="admin-stat-num">${ov.downloadCount ?? 0}</span>
+          <span class="admin-stat-label">Attestations téléchargées</span>
         </article>
       </div>`
       : `<p class="admin-banner muted">Les statistiques nécessitent le mode API Neon et une base connectée.</p>`;
@@ -101,7 +110,7 @@ export async function renderAdminOverviewHtml(user) {
   const inner = `
     <header class="admin-page-head">
       <h1 class="h1">Vue d’ensemble</h1>
-      <p class="muted body-lg">Tableau de bord — parcours <strong>${esc(COURSE.slug)}</strong>.</p>
+      <p class="muted body-lg">Pilotez les apprentissages, les ateliers, les utilisateurs et les attestations.</p>
     </header>
     ${stats}
     <section class="admin-quick surface-container-low">
@@ -112,12 +121,16 @@ export async function renderAdminOverviewHtml(user) {
           <span class="muted small">Vidéos, tags, notebooks Colab</span>
         </a>
         <a data-router href="/admin/webinars" class="admin-quick-tile surface-container-lowest">
-          <span class="admin-quick-tile-title">Webinaires</span>
-          <span class="muted small">Replays, événements, inscriptions</span>
+          <span class="admin-quick-tile-title">Ateliers &amp; replays</span>
+          <span class="muted small">Événements, inscriptions, compétences humaines</span>
         </a>
         <a data-router href="/admin/users" class="admin-quick-tile surface-container-lowest">
-          <span class="admin-quick-tile-title">Utilisateurs</span>
-          <span class="muted small">Rôles learner / admin</span>
+          <span class="admin-quick-tile-title">Apprenants</span>
+          <span class="muted small">Comptes, rôles et progression</span>
+        </a>
+        <a data-router href="/admin/attestations" class="admin-quick-tile surface-container-lowest">
+          <span class="admin-quick-tile-title">Attestations</span>
+          <span class="muted small">Demandes, retraits et téléchargements</span>
         </a>
         <a data-router href="/admin/crm" class="admin-quick-tile surface-container-lowest">
           <span class="admin-quick-tile-title">Contacts (CRM)</span>

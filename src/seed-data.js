@@ -149,9 +149,9 @@ export const COURSE = {
   /** Inchangé pour compatibilité avec les inscriptions en base (Prisma) */
   slug: 'formation-ia',
   title: 'Machine Learning & intelligence artificielle',
-  subtitle: 'Formation pour ingénieurs',
+  subtitle: 'Parcours pour collégiens et lycéens',
   lead:
-    'Parcours structuré : fondations Python, mathématiques pour le ML, modèles, deep learning et mise en pratique — avec suivi de progression et communauté.',
+    'Un parcours progressif pour comprendre l’intelligence artificielle, consolider ses mathématiques, programmer en Python et construire ses premiers modèles.',
 };
 
 export function parseSessions(raw = RAW_SESSIONS) {
