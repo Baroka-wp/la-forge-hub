@@ -2,7 +2,7 @@
 
 Ce dépôt contient l’application LMS + webinaires de La Forge Hub. La branche `feature/admin-automation-api` ajoute :
 
-1. **Clé automation** pour accéder aux routes `/api/admin/*` sans session web (header `X-Automation-Key`).
+1. **Clé automation** pour accéder aux routes `/api/admin/*` sans session web.
 2. **Script de déploiement Coolify** (`npm run deploy:coolify`) pour relancer l’application depuis des automatisations.
 
 ## Accès Automation
@@ -13,28 +13,10 @@ Définir dans l’environnement :
 AUTOMATION_API_KEYS="key1,key2,..."
 ```
 
-Ensuite, toute requête HTTP contenant `X-Automation-Key: key1` (ou `X-API-Key`) est traitée comme un administrateur par `requireAdmin`.
-
-Exemples :
-
-```bash
-curl -X POST https://forgehub.example.com/api/admin/webinars \
-  -H "X-Automation-Key: $AUTOMATION_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Atelier IA", "description": "...", "tag": "atelier",
-    "startsAt": "2025-05-20T18:00:00Z",
-    "locationType": "ONLINE",
-    "onlineLink": "https://meet.google.com/..."
-  }'
-
-curl -X PATCH https://forgehub.example.com/api/admin/webinars/<id> \
-  -H "X-Automation-Key: $AUTOMATION_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{ "recordingUrl": "https://youtube.com/..." }'
-```
-
-Toutes les routes admin existantes (webinaires, leçons, CRM) sont ainsi pilotables par un bot.
+Une requête portant une clé valide est alors traitée comme administrateur par
+`requireAdmin` : toutes les routes admin (webinaires, leçons, CRM) deviennent pilotables
+par une automatisation. Les en-têtes acceptés et le format des charges utiles sont
+décrits dans `api/_lib/automationAuth.js` et les handlers `api/admin-*.js`.
 
 ## Déploiement Coolify
 
@@ -161,38 +143,28 @@ Mise en service, dans l'ordre :
 
 ```bash
 npm run db:migrate                  # crée participants / certificates / logs
-npm run db:seed:attestations        # charge les 149 participants et leurs 169 attestations
+npm run db:seed:attestations        # charge la liste des participants et leurs attestations
 npm run db:import:attestations -- --kind NOAI \
-  --pdf data/attestations/noai/pdf --preview data/attestations/noai/preview
+  --pdf <dossier-pdf> --preview <dossier-apercus>
 npm run db:import:attestations -- --kind BOOTCAMP \
-  --pdf data/attestations/bootcamp/pdf --preview data/attestations/bootcamp/preview
+  --pdf <dossier-pdf> --preview <dossier-apercus>
 ```
 
-La liste officielle vit dans `data/participants-noai-2026.js` et fait foi. Les PDF ne
-sont pas versionnés (`data/attestations/` est ignoré) : ils sont stockés en base, servis
-uniquement via un jeton signé de 30 minutes délivré après vérification du numéro de table
-et du nom. Les deux scripts sont idempotents et ne remettent jamais à zéro les compteurs.
+Les PDF ne sont pas versionnés (`data/attestations/` est ignoré) : ils sont stockés en
+base et servis uniquement via un jeton signé de courte durée, délivré après vérification
+de l'identité du demandeur. Les deux scripts sont idempotents et ne remettent jamais à
+zéro les compteurs.
 
-Chaque demande validée met à jour la fiche du participant (e-mail, téléphone, nom saisi,
-nombre de demandes, première et dernière demande). Suivi des relances :
+Chaque demande validée met à jour la fiche du participant, et les demandes en échec sont
+conservées pour le support. Les colonnes exactes sont décrites dans `prisma/schema.prisma`
+(`Participant`, `Certificate`, `CertificateRequest`, `CertificateDownload`) : le suivi des
+relances et les statistiques de téléchargement se font directement en base, depuis un
+poste autorisé.
 
-```sql
-SELECT table_number, last_name, first_name, email, phone, last_request_at
-FROM participants WHERE request_count = 0 ORDER BY table_number;
-```
+Les recherches sont limitées par adresse réseau. Seule une empreinte HMAC anonyme est
+stockée dans `certificate_rate_limits` ; elle utilise `RATE_LIMIT_SECRET` si cette
+variable est définie, sinon le `JWT_SECRET` existant.
 
-Statistiques de téléchargement :
-
-```sql
-SELECT p.table_number, p.last_name, c.kind, c.download_count
-FROM certificates c JOIN participants p ON p.id = c.participant_id
-ORDER BY c.download_count DESC;
-```
-
-Les demandes en échec (numéro inconnu, nom qui ne correspond pas) sont conservées dans
-`certificate_requests` pour le support ; l'adresse d'assistance affichée est
-birotori@gmail.com.
-
-La recherche est limitée à cinq tentatives par adresse réseau sur dix minutes. Seule une
-empreinte HMAC anonyme est stockée dans `certificate_rate_limits`. Elle utilise
-`RATE_LIMIT_SECRET` si cette variable est définie, sinon le `JWT_SECRET` existant.
+> Les données de participants relèvent du RGPD : ne pas recopier de noms, d'adresses
+> e-mail, de numéros de téléphone ni de requêtes prêtes à l'emploi dans ce dépôt public,
+> ni dans les tickets et les descriptions de pull request.
