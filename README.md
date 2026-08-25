@@ -61,6 +61,96 @@ Cela déclenche un redeploy via l’API `POST /api/v1/applications/:id/deploy`.
 - Régénérer une clé si elle est compromise (redémarrage nécessaire pour purger l’ancienne valeur).
 - Les clés ne contournent que les routes admin (`requireAdmin`), le front public reste inchangé.
 
+## EMONOS — Task Automation (espace `/emonos`)
+
+Réalisation de la présentation *Task Manager : EMONOS*. L'espace est monté sur
+`/emonos`, en plein écran, et réutilise la session La Forge Hub (aucune
+authentification séparée : le deck décrit un écran de connexion, le compte du hub
+en tient lieu). L'interface est en français ; les concepts du deck gardent leurs
+noms (workflow, macro, `event_dashboard`, `event_configure`).
+
+### Sections
+
+| Route | Écran du deck | Contenu |
+| --- | --- | --- |
+| `/emonos` | Project management | Liste des projets, groupée par priorité, responsable ou étape ; assistant de création en quatre étapes ; fiche projet |
+| `/emonos/timeline` | Project Timeline | Diagramme de Gantt des tâches datées (rendu maison, sans dépendance) |
+| `/emonos/tasks` | Tasks management | Tâches empilées par jour d'échéance, arborescence, pagination, boutons latéraux et boutons par tâche |
+| `/emonos/documents` | Documents templates | Modèles réutilisables et documents instanciés sur un projet |
+| `/emonos/teams` | Team management | Équipes réutilisables, importables par l'assistant |
+| `/emonos/workflows` | Workflow designer | Concepteur de graphe (étapes, décisions, nœuds « sous-tâche ») |
+| `/emonos/config` | Configuration | Mes tâches, types de projet, workflows installés, macros disponibles |
+
+### Assistant de création (quatre étapes)
+
+1. **Projet** — nom, projet parent, priorité, notes.
+2. **Type** — `SOFTWARE_DEV`, `CALL_FOR_TENDER` ou `COMPANY_MGMT`. Chaque type est
+   un modèle (`api/_lib/emonos-blueprints.js`) qui décrit l'arborescence de tâches,
+   les modèles de documents et le workflow à installer.
+3. **Dates** — sans date, dates fixes, ou automatique (l'échéance découle de la
+   durée du modèle ; les tâches sont datées par décalage depuis la date de début).
+4. **Équipe** — automatique (équipe la moins chargée), sans équipe, ou une équipe
+   existante, dont les membres deviennent membres du projet.
+
+### Boutons du deck
+
+Boutons latéraux : `+` (assistant contextuel), filtre **tâches critiques**, filtre
+**tâches arrêtées**, bascule **archives**.
+
+Boutons par tâche : `Éditer`, `Ouvrir` (descend d'un niveau, le fil d'Ariane
+affiche `/Développement/Design`), `Archiver` (emporte la descendance), `Supprimer`,
+plus deux actions personnalisées **affichées seulement si la macro est présente** :
+
+- `event_dashboard` → `sprint_dashboard`, `budget_dashboard`, `tender_dashboard` :
+  synthèse chiffrée de la branche (charge, avancement, retards, prochaine échéance).
+- `event_configure` → `configure_repository`, `configure_ci`,
+  `configure_review_board` : déploie une liste de sous-tâches, de façon idempotente.
+
+Seules ces macros sont acceptées par l'API : une valeur libre est rejetée.
+
+### Moteur de workflow
+
+Un workflow est un graphe partagé par type de projet, édité dans le concepteur.
+Le moteur avance une exécution (`WorkflowRun`) rattachée à un projet :
+
+- un nœud `DECISION` exige la branche empruntée (`GO` / `NO GO`) ;
+- un nœud `SUBTASK` instancie la tâche décrite par sa macro (idempotent par titre) ;
+- l'étape du projet (`PRESALE` → `CLOSED`) suit le nœud atteint ;
+- un nœud `END` clôt l'exécution.
+
+L'enregistrement du graphe conserve les nœuds dont la clé n'a pas changé, pour que
+les exécutions en cours restent rattachées à leur étape.
+
+### Droits d'accès
+
+Un projet est visible par son propriétaire, ses membres, les membres de l'équipe
+rattachée, et les administrateurs de la plateforme. `VIEWER` est en lecture seule ;
+`MEMBER` écrit ; `OWNER` et `MANAGER` administrent (suppression, membres, workflow).
+Un projet inaccessible répond `404`, jamais `403`.
+
+### Mise en service
+
+```bash
+npm run db:migrate                  # applique 20260825120000_emonos_task_manager
+npm run db:seed:emonos              # équipes de démonstration + projet « LOGOS »
+npm run db:seed:emonos -- --owner vous@exemple.com   # rattache la démo à votre compte
+```
+
+Le seed est idempotent : il ne recrée ni les équipes ni le projet `LOGOS`.
+
+### Tests
+
+```bash
+npm test                            # inclut spec/tests/emonos.test.mjs
+```
+
+La suite couvre l'assistant, l'arborescence et le fil d'Ariane, les filtres du
+deck, l'archivage en cascade, les deux familles de macros, le moteur de workflow
+(décision `GO` / `NO GO`, nœud `SUBTASK`), la validation du concepteur et les
+droits d'accès. Elle crée sa propre base :
+`SPEC_DATABASE_URL` accepte un gabarit contenant `{db}` quand le rôle `baroka`
+par défaut n'existe pas.
+
 ## Attestations NOAI 2026 (page `/attestations`)
 
 Page publique non listée dans le menu, accessible par lien direct. Elle permet aux

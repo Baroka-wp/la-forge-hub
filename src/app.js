@@ -61,6 +61,7 @@ import {
 import { pushLoading, popLoading, withLoading } from './loader.js';
 import { renderCguPageHtml } from './legal-cgu.js';
 import { renderAttestationsPageHtml, bindAttestationsPage } from './attestations.js';
+import { matchEmonosSection, renderEmonosPageHtml, bindEmonosPage } from './emonos/index.js';
 import { applySeoMeta, DEFAULT_SITE_DESCRIPTION, truncateMetaDescription } from './seo.js';
 
 /** Rempli au démarrage par `loadCatalogSessions()` (base Neon ou fallback fichier) */
@@ -89,6 +90,11 @@ function matchRoute() {
   if (parts[0] === 'cgu') return { name: 'cgu' };
   /** Page non listée dans le menu — accès par lien direct uniquement. */
   if (parts[0] === 'attestations') return { name: 'attestations' };
+  /** EMONOS — espace de travail plein écran (rail de sections interne). */
+  if (parts[0] === 'emonos') {
+    const section = matchEmonosSection(path);
+    if (section) return { name: 'emonos', section };
+  }
   if (parts[0] === 'webinars') {
     if (parts.length === 1) return { name: 'webinars' };
     if (parts.length === 2) return { name: 'webinar-detail', id: parts[1] };
@@ -379,6 +385,8 @@ async function render() {
     const route = matchRoute();
     const app = document.getElementById('app');
     if (!app) return;
+    /** EMONOS occupe tout l'écran : le fond et le défilement changent de règles. */
+    document.body.classList.toggle('emonos-mode', route.name === 'emonos');
 
     if (route.name === 'home') {
       app.innerHTML = shell(await renderHome(), {
@@ -426,6 +434,19 @@ async function render() {
       app.innerHTML = renderAttestationsPageHtml();
       bindAttestationsPage();
       return;
+    } else if (route.name === 'emonos') {
+      if (!currentUser) {
+        navigate(`/login?next=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
+      /** Application plein écran : pas de coquille marketing autour. */
+      app.innerHTML = renderEmonosPageHtml(route.section);
+      applySeoMeta({
+        title: `EMONOS — Task Automation — ${PLATFORM_BRAND}`,
+        description: 'Gestion de projets, tâches, workflows et documents.',
+        noIndex: true,
+      });
+      await bindEmonosPage(route.section, { navigate });
     } else if (route.name === 'course' && route.slug === COURSE.slug) {
       app.innerHTML = shell(await renderCourse(), {
         title: `${COURSE.title} — Parcours`,

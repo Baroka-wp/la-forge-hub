@@ -1,0 +1,1282 @@
+/**
+ * EMONOS — Task Automation.
+ * Espace de travail sombre, dense et calme : rail de sections à gauche,
+ * barre d'outils en haut, boutons latéraux à droite, comme dans le deck.
+ */
+
+.emonos-app {
+  --emonos-bg: #0d1a2b;
+  --emonos-surface: #142639;
+  --emonos-surface-high: #1b3149;
+  --emonos-line: rgba(148, 183, 219, 0.18);
+  --emonos-text: #e6eef7;
+  --emonos-text-dim: #9db2ca;
+  --emonos-accent: #18a16c;
+  --emonos-accent-soft: rgba(24, 161, 108, 0.16);
+  --emonos-warn: #e0a33a;
+  --emonos-danger: #e2685f;
+  --emonos-rail: 232px;
+  --emonos-side: 68px;
+
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: var(--emonos-rail) 1fr var(--emonos-side);
+  background: var(--emonos-bg);
+  color: var(--emonos-text);
+  font-family: var(--font, 'Outfit', system-ui, sans-serif);
+  overflow: hidden;
+}
+
+body.emonos-mode {
+  overflow: hidden;
+}
+
+/** Les titres du design system La Forge Hub sont clairs : ici le fond est sombre. */
+.emonos-app h1,
+.emonos-app h2,
+.emonos-app h3 {
+  color: var(--emonos-text);
+  font-weight: 600;
+}
+
+body.emonos-mode > *:not(#app):not(#global-loader) {
+  display: none;
+}
+
+/* ---------- Rail des sections ---------- */
+
+.emonos-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem;
+  background: linear-gradient(180deg, #0b1725 0%, #12293e 100%);
+  border-right: 1px solid var(--emonos-line);
+  overflow-y: auto;
+}
+
+.emonos-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.emonos-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--emonos-accent);
+  color: #06131f;
+  font-weight: 800;
+  font-size: 1.15rem;
+}
+
+.emonos-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.emonos-brand-text strong {
+  letter-spacing: 0.16em;
+  font-size: 0.95rem;
+}
+
+.emonos-brand-text em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+  letter-spacing: 0.05em;
+}
+
+.emonos-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.emonos-rail-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  color: var(--emonos-text-dim);
+  text-decoration: none;
+  font-size: 0.9rem;
+  min-height: 40px;
+}
+
+.emonos-rail-link span {
+  width: 1.1rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.emonos-rail-link:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--emonos-text);
+}
+
+.emonos-rail-link.is-active {
+  background: var(--emonos-accent-soft);
+  color: #7ce0b3;
+  box-shadow: inset 2px 0 0 var(--emonos-accent);
+}
+
+.emonos-rail-back {
+  margin-top: auto;
+  color: var(--emonos-text-dim);
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+.emonos-rail-back:hover {
+  color: var(--emonos-text);
+}
+
+/* ---------- Colonne centrale ---------- */
+
+.emonos-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.emonos-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid var(--emonos-line);
+  background: var(--emonos-surface);
+}
+
+.emonos-topbar-left,
+.emonos-topbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.emonos-select {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.emonos-select select,
+.emonos-select input {
+  min-height: 34px;
+  padding: 0.3rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-bg);
+  color: var(--emonos-text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.emonos-topbar-tag,
+.emonos-topbar-tz,
+.emonos-topbar-user {
+  font-size: 0.8rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-topbar-user {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--emonos-surface-high);
+  color: var(--emonos-text);
+}
+
+.emonos-flash {
+  margin: 0;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.88rem;
+  border-bottom: 1px solid var(--emonos-line);
+}
+
+.emonos-flash.is-success {
+  background: var(--emonos-accent-soft);
+  color: #93e7c0;
+}
+
+.emonos-flash.is-error {
+  background: rgba(226, 104, 95, 0.16);
+  color: #f3b0aa;
+}
+
+.emonos-flash.is-info {
+  background: rgba(148, 183, 219, 0.12);
+  color: var(--emonos-text);
+}
+
+.emonos-workspace {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+
+.emonos-loading {
+  color: var(--emonos-text-dim);
+  padding: 2rem 0;
+}
+
+/* ---------- Boutons latéraux ---------- */
+
+.emonos-side-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.25rem 0.75rem;
+  border-left: 1px solid var(--emonos-line);
+  background: var(--emonos-surface);
+}
+
+.emonos-side-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-bg);
+  color: var(--emonos-text-dim);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.emonos-side-btn:hover {
+  color: var(--emonos-text);
+  border-color: rgba(148, 183, 219, 0.4);
+}
+
+.emonos-side-btn.is-add {
+  background: var(--emonos-accent);
+  border-color: var(--emonos-accent);
+  color: #06131f;
+  font-weight: 700;
+}
+
+.emonos-side-btn.is-on {
+  background: var(--emonos-accent-soft);
+  border-color: var(--emonos-accent);
+  color: #7ce0b3;
+}
+
+/* ---------- Cartes et panneaux ---------- */
+
+.emonos-group + .emonos-group {
+  margin-top: 1.75rem;
+}
+
+.emonos-group-title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--emonos-text-dim);
+  margin-bottom: 0.75rem;
+}
+
+.emonos-count {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--emonos-surface-high);
+  font-size: 0.75rem;
+}
+
+.emonos-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.emonos-card,
+.emonos-panel {
+  background: var(--emonos-surface);
+  border: 1px solid var(--emonos-line);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.emonos-project-card.is-current {
+  border-color: var(--emonos-accent);
+  box-shadow: 0 0 0 1px var(--emonos-accent-soft);
+}
+
+.emonos-card-head,
+.emonos-panel-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.emonos-panel-head h2 {
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+}
+
+.emonos-card-title {
+  font-size: 1.05rem;
+}
+
+.emonos-card-sub {
+  font-size: 0.8rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.emonos-meta.is-wide {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.emonos-meta dt {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-meta dd {
+  font-size: 0.9rem;
+}
+
+.emonos-card-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.emonos-card-actions,
+.emonos-designer-actions,
+.emonos-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.emonos-notes {
+  font-size: 0.9rem;
+  color: var(--emonos-text-dim);
+  margin-bottom: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.emonos-detail,
+.emonos-library {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  align-items: start;
+}
+
+.emonos-subtitle {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--emonos-text-dim);
+  margin: 0.9rem 0 0.4rem;
+}
+
+/* ---------- Boutons et pastilles ---------- */
+
+.emonos-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 34px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-surface-high);
+  color: var(--emonos-text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.emonos-btn:hover {
+  border-color: rgba(148, 183, 219, 0.42);
+}
+
+.emonos-btn.is-primary {
+  background: var(--emonos-accent);
+  border-color: var(--emonos-accent);
+  color: #06131f;
+  font-weight: 600;
+}
+
+.emonos-btn.is-accent {
+  background: rgba(224, 163, 58, 0.16);
+  border-color: rgba(224, 163, 58, 0.5);
+  color: #f0c987;
+}
+
+.emonos-btn.is-ghost {
+  background: transparent;
+}
+
+.emonos-btn.is-danger {
+  background: transparent;
+  border-color: rgba(226, 104, 95, 0.4);
+  color: #f0a49e;
+}
+
+.emonos-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.emonos-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--emonos-line);
+  background: transparent;
+  color: var(--emonos-text-dim);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.emonos-icon-btn:hover:not([disabled]) {
+  color: var(--emonos-text);
+}
+
+.emonos-icon-btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.emonos-link-btn {
+  border: 0;
+  background: none;
+  color: #7ce0b3;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.emonos-chip {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  background: var(--emonos-surface-high);
+  border: 1px solid var(--emonos-line);
+  font-size: 0.73rem;
+  color: var(--emonos-text-dim);
+  white-space: nowrap;
+}
+
+.emonos-chip.is-muted { opacity: 0.7; }
+.emonos-chip.is-success { background: var(--emonos-accent-soft); color: #93e7c0; border-color: rgba(24, 161, 108, 0.45); }
+.emonos-chip.is-accent { background: rgba(224, 163, 58, 0.16); color: #f0c987; border-color: rgba(224, 163, 58, 0.45); }
+
+.emonos-chip.is-priority-critical { background: rgba(226, 104, 95, 0.18); color: #f3b0aa; border-color: rgba(226, 104, 95, 0.45); }
+.emonos-chip.is-priority-high { background: rgba(224, 163, 58, 0.16); color: #f0c987; border-color: rgba(224, 163, 58, 0.4); }
+.emonos-chip.is-priority-normal { color: var(--emonos-text); }
+.emonos-chip.is-priority-low { opacity: 0.75; }
+
+.emonos-chip.is-state-running { background: var(--emonos-accent-soft); color: #93e7c0; }
+.emonos-chip.is-state-stopped { background: rgba(226, 104, 95, 0.16); color: #f3b0aa; }
+.emonos-chip.is-state-done { background: rgba(148, 183, 219, 0.16); color: #cfe0f0; }
+.emonos-chip.is-state-cancelled { opacity: 0.6; }
+
+/* ---------- Listes, tableaux, statistiques ---------- */
+
+.emonos-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.emonos-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 9px;
+  background: var(--emonos-bg);
+  font-size: 0.88rem;
+}
+
+.emonos-list li em {
+  font-style: normal;
+  color: var(--emonos-text-dim);
+  font-size: 0.8rem;
+  margin-left: 0.4rem;
+}
+
+.emonos-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.emonos-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.emonos-table caption {
+  text-align: left;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--emonos-text-dim);
+  padding-bottom: 0.4rem;
+}
+
+.emonos-table th,
+.emonos-table td {
+  text-align: left;
+  padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--emonos-line);
+}
+
+.emonos-table th {
+  color: var(--emonos-text-dim);
+  font-weight: 500;
+}
+
+.emonos-inline-input {
+  width: 100%;
+  min-height: 30px;
+  padding: 0.2rem 0.45rem;
+  border-radius: 7px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-bg);
+  color: var(--emonos-text);
+  font: inherit;
+}
+
+.emonos-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.emonos-stat {
+  flex: 1 1 96px;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: var(--emonos-bg);
+  border: 1px solid var(--emonos-line);
+}
+
+.emonos-stat strong {
+  display: block;
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.emonos-stat span {
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.emonos-stat.is-alert {
+  border-color: rgba(226, 104, 95, 0.5);
+  color: #f3b0aa;
+}
+
+.emonos-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-empty-title {
+  font-size: 1.05rem;
+  color: var(--emonos-text);
+  margin-bottom: 0.35rem;
+}
+
+.emonos-empty-hint {
+  font-size: 0.85rem;
+}
+
+/* ---------- Écran des tâches ---------- */
+
+.emonos-tasks-head {
+  margin-bottom: 1rem;
+}
+
+.emonos-tasks-scope {
+  font-size: 0.95rem;
+}
+
+.emonos-breadcrumb {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--emonos-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.emonos-breadcrumb code {
+  background: var(--emonos-surface-high);
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  color: var(--emonos-text);
+}
+
+.emonos-crumb-up {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-surface-high);
+  color: var(--emonos-text);
+  cursor: pointer;
+}
+
+.emonos-day {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.emonos-day-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0;
+  height: fit-content;
+  border-radius: 12px;
+  background: var(--emonos-surface-high);
+  border: 1px solid var(--emonos-line);
+}
+
+.emonos-day-chip strong {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.emonos-day-chip span {
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-day-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.emonos-task {
+  background: var(--emonos-surface);
+  border: 1px solid var(--emonos-line);
+  border-left: 3px solid transparent;
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+}
+
+.emonos-task.is-overdue {
+  border-left-color: var(--emonos-danger);
+}
+
+.emonos-task-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.emonos-task-head h3 {
+  font-size: 0.98rem;
+}
+
+.emonos-task-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.emonos-task-desc {
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0.5rem 0 0.65rem;
+  font-size: 0.78rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0 1.5rem;
+  font-size: 0.82rem;
+  color: var(--emonos-text-dim);
+}
+
+/* ---------- Exécution de workflow ---------- */
+
+.emonos-run-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.emonos-run-current {
+  margin: 0.4rem 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-run-log {
+  list-style: none;
+  margin-top: 0.9rem;
+  border-left: 2px solid var(--emonos-line);
+  padding-left: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.emonos-run-log li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+}
+
+.emonos-run-log-node {
+  font-weight: 600;
+}
+
+.emonos-run-log-task,
+.emonos-run-log-note {
+  color: var(--emonos-text-dim);
+}
+
+.emonos-run-log time {
+  margin-left: auto;
+  color: var(--emonos-text-dim);
+  font-size: 0.75rem;
+}
+
+/* ---------- Concepteur de workflow ---------- */
+
+.emonos-designer-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.emonos-designer-hint {
+  font-size: 0.8rem;
+  color: var(--emonos-text-dim);
+  margin-bottom: 0.6rem;
+}
+
+.emonos-canvas-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--emonos-line);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(148, 183, 219, 0.16) 1px, transparent 0) 0 0 / 24px 24px,
+    var(--emonos-surface);
+}
+
+.emonos-canvas {
+  display: block;
+  max-width: none;
+}
+
+.emonos-edge {
+  fill: none;
+  stroke: rgba(148, 183, 219, 0.55);
+  stroke-width: 2;
+}
+
+#emonos-arrow path {
+  fill: rgba(148, 183, 219, 0.75);
+}
+
+.emonos-edge-label {
+  fill: #f0c987;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.emonos-node {
+  cursor: grab;
+}
+
+.emonos-node rect {
+  fill: var(--emonos-surface-high);
+  stroke: var(--emonos-line);
+  stroke-width: 1.5;
+}
+
+.emonos-node.is-start rect { stroke: var(--emonos-accent); }
+.emonos-node.is-end rect { stroke: rgba(148, 183, 219, 0.6); }
+.emonos-node.is-decision rect { fill: rgba(224, 163, 58, 0.14); stroke: rgba(224, 163, 58, 0.65); }
+.emonos-node.is-subtask rect { fill: var(--emonos-accent-soft); stroke: rgba(24, 161, 108, 0.6); }
+.emonos-node.is-selected rect,
+.emonos-node.is-linking rect { stroke: #7ce0b3; stroke-width: 2.5; }
+
+.emonos-node-kind {
+  fill: var(--emonos-text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: inherit;
+}
+
+.emonos-node-label {
+  fill: var(--emonos-text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.emonos-node-tools circle {
+  fill: rgba(13, 26, 43, 0.85);
+  stroke: var(--emonos-line);
+  cursor: pointer;
+}
+
+.emonos-node-tools text {
+  fill: var(--emonos-text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.emonos-node-tools:hover text {
+  fill: var(--emonos-text);
+}
+
+/* ---------- Timeline / Gantt ---------- */
+
+.emonos-timeline-head {
+  margin-bottom: 1rem;
+}
+
+.emonos-gantt {
+  border: 1px solid var(--emonos-line);
+  border-radius: 14px;
+  background: var(--emonos-surface);
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.emonos-gantt-scroll {
+  min-width: 720px;
+}
+
+.emonos-gantt-axis {
+  position: relative;
+  height: 22px;
+  margin-left: 240px;
+  border-bottom: 1px solid var(--emonos-line);
+  margin-bottom: 0.5rem;
+}
+
+.emonos-gantt-axis span {
+  position: absolute;
+  top: 0;
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.emonos-gantt-row {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.18rem 0;
+}
+
+.emonos-gantt-label {
+  padding-left: calc(var(--depth, 0) * 0.75rem);
+  font-size: 0.82rem;
+  color: var(--emonos-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emonos-gantt-track {
+  position: relative;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(148, 183, 219, 0.07);
+}
+
+.emonos-gantt-bar {
+  position: absolute;
+  top: 3px;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(148, 183, 219, 0.4);
+  overflow: hidden;
+}
+
+.emonos-gantt-bar.is-running { background: rgba(24, 161, 108, 0.55); }
+.emonos-gantt-bar.is-stopped { background: rgba(226, 104, 95, 0.55); }
+.emonos-gantt-bar.is-done { background: rgba(148, 183, 219, 0.55); }
+.emonos-gantt-bar.is-priority-critical { box-shadow: inset 0 0 0 1.5px rgba(226, 104, 95, 0.9); }
+
+.emonos-gantt-progress {
+  display: block;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* ---------- Formulaires et boîtes de dialogue ---------- */
+
+.emonos-modal[hidden] {
+  display: none;
+}
+
+.emonos-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.emonos-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 12, 20, 0.72);
+}
+
+.emonos-modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--emonos-surface);
+  border: 1px solid var(--emonos-line);
+  border-radius: 16px;
+}
+
+.emonos-modal-card.is-lg {
+  width: min(820px, 100%);
+}
+
+.emonos-modal-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--emonos-line);
+  background: var(--emonos-surface);
+}
+
+.emonos-modal-head h2 {
+  font-size: 1rem;
+}
+
+.emonos-modal-body {
+  padding: 1rem;
+}
+
+.emonos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.emonos-form-lead {
+  font-size: 0.95rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-form-hint {
+  font-size: 0.78rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-form-error {
+  padding: 0.5rem 0.7rem;
+  border-radius: 9px;
+  background: rgba(226, 104, 95, 0.16);
+  color: #f3b0aa;
+  font-size: 0.85rem;
+}
+
+.emonos-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-field > span em {
+  color: var(--emonos-danger);
+  font-style: normal;
+}
+
+.emonos-field input,
+.emonos-field select,
+.emonos-field textarea {
+  min-height: 38px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 9px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-bg);
+  color: var(--emonos-text);
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.emonos-field textarea {
+  resize: vertical;
+}
+
+.emonos-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.emonos-field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.emonos-fieldset {
+  border: 1px solid var(--emonos-line);
+  border-radius: 12px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.emonos-fieldset legend {
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.emonos-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+}
+
+.emonos-form-actions .is-danger {
+  margin-right: auto;
+}
+
+/* ---------- Assistant ---------- */
+
+.emonos-wizard-rail {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.emonos-wizard-rail li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--emonos-line);
+  font-size: 0.78rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-wizard-rail li span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--emonos-surface-high);
+  font-size: 0.72rem;
+}
+
+.emonos-wizard-rail li.is-current {
+  border-color: var(--emonos-accent);
+  color: #7ce0b3;
+}
+
+.emonos-wizard-rail li.is-current span {
+  background: var(--emonos-accent);
+  color: #06131f;
+}
+
+.emonos-wizard-rail li.is-done span {
+  background: var(--emonos-accent-soft);
+  color: #7ce0b3;
+}
+
+.emonos-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.emonos-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--emonos-line);
+  background: var(--emonos-bg);
+  cursor: pointer;
+}
+
+.emonos-choice:hover {
+  border-color: rgba(148, 183, 219, 0.4);
+}
+
+.emonos-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.emonos-choice:has(input:checked),
+.emonos-choice.is-selected {
+  border-color: var(--emonos-accent);
+  background: var(--emonos-accent-soft);
+}
+
+.emonos-choice-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.emonos-choice-text {
+  font-size: 0.8rem;
+  color: var(--emonos-text-dim);
+}
+
+.emonos-choice-meta {
+  font-size: 0.72rem;
+  color: var(--emonos-text-dim);
+  opacity: 0.85;
+}
+
+/* ---------- Adaptation mobile ---------- */
+
+@media (max-width: 1024px) {
+  .emonos-app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+
+  .emonos-rail {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    overflow-x: auto;
+    padding: 0.6rem 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--emonos-line);
+  }
+
+  .emonos-rail-nav {
+    flex-direction: row;
+    gap: 0.35rem;
+  }
+
+  .emonos-rail-link {
+    white-space: nowrap;
+  }
+
+  .emonos-rail-back {
+    margin-top: 0;
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .emonos-side-buttons {
+    flex-direction: row;
+    justify-content: center;
+    border-left: 0;
+    border-top: 1px solid var(--emonos-line);
+    padding: 0.6rem;
+  }
+
+  .emonos-day {
+    grid-template-columns: 62px 1fr;
+  }
+
+  .emonos-gantt-row,
+  .emonos-gantt-axis {
+    grid-template-columns: 150px 1fr;
+  }
+
+  .emonos-gantt-axis {
+    margin-left: 150px;
+  }
+}

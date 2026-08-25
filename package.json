@@ -20,6 +20,7 @@
     "db:migrate": "node node_modules/prisma/build/index.js migrate dev",
     "db:studio": "node node_modules/prisma/build/index.js studio",
     "db:seed": "node node_modules/prisma/build/index.js db seed",
+    "db:seed:emonos": "node prisma/seed-emonos.mjs",
     "admin:promote": "node scripts/promote-admin.mjs",
     "deploy:coolify": "node scripts/coolify-deploy.mjs",
     "db:seed:attestations": "node prisma/seed-attestations.mjs",
