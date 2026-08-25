@@ -65,6 +65,14 @@ model User {
   reviewedSubmissions  ProjectSubmission[] @relation("ProjectReviewer")
   badges               UserBadge[]
 
+  /* EMONOS */
+  teamMemberships      TeamMember[]
+  ownedProjects        TaskProject[]       @relation("ProjectOwner")
+  projectMemberships   TaskProjectMember[]
+  ownedTasks           Task[]              @relation("TaskOwner")
+  taskEvents           TaskEvent[]
+  workflowRunLogs      WorkflowRunLog[]
+
   @@map("users")
 }
 
@@ -503,4 +511,367 @@ model CertificateRateLimit {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("certificate_rate_limits")
+}
+
+/**
+ * ---------- EMONOS — Task Automation (gestion de projets & tâches) ----------
+ */
+
+/**
+ * Type de projet proposé par l'assistant de création (« Type of project »).
+ */
+enum TaskProjectKind {
+  SOFTWARE_DEV
+  CALL_FOR_TENDER
+  COMPANY_MGMT
+}
+
+/**
+ * Mode de datation choisi à l'étape « Project dates » de l'assistant.
+ */
+enum ProjectDateMode {
+  NONE
+  FIXED
+  AUTOMATIC
+}
+
+/**
+ * Étape du cycle de vie d'un projet (regroupement « by stage »).
+ */
+enum ProjectStage {
+  PRESALE
+  EVALUATION
+  DEVELOPMENT
+  DELIVERY
+  CLOSED
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum TaskState {
+  TODO
+  RUNNING
+  STOPPED
+  DONE
+  CANCELLED
+}
+
+enum ProjectMemberRole {
+  OWNER
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+/**
+ * Types de nœuds du concepteur de workflow.
+ */
+enum WorkflowNodeKind {
+  START
+  STEP
+  DECISION
+  SUBTASK
+  END
+}
+
+enum WorkflowRunStatus {
+  RUNNING
+  DONE
+  CANCELLED
+}
+
+/**
+ * Équipe réutilisable, importable à l'étape « Team » de l'assistant.
+ */
+model Team {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members  TeamMember[]
+  projects TaskProject[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  teamId   String            @map("team_id")
+  userId   String            @map("user_id")
+  role     ProjectMemberRole @default(MEMBER)
+  joinedAt DateTime          @default(now()) @map("joined_at")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+/**
+ * Projet EMONOS. Arborescence via `parentId` (« Parent project » de l'assistant) ;
+ * distinct du modèle `Project` du LMS, qui décrit un projet pédagogique.
+ */
+model TaskProject {
+  id        String          @id @default(uuid())
+  name      String
+  notes     String?         @db.Text
+  kind      TaskProjectKind @default(SOFTWARE_DEV)
+  stage     ProjectStage    @default(PRESALE)
+  priority  TaskPriority    @default(NORMAL)
+  parentId  String?         @map("parent_id")
+  ownerId   String?         @map("owner_id")
+  teamId    String?         @map("team_id")
+  dateMode  ProjectDateMode @default(NONE) @map("date_mode")
+  startDate DateTime?       @map("start_date")
+  dueDate   DateTime?       @map("due_date")
+  timezone  String          @default("Europe/Paris")
+  archived  Boolean         @default(false)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  parent   TaskProject?  @relation("ProjectTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children TaskProject[] @relation("ProjectTree")
+  owner    User?         @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  team     Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  tasks     Task[]
+  members   TaskProjectMember[]
+  documents ProjectDocument[]
+  runs      WorkflowRun[]
+
+  @@index([parentId])
+  @@index([archived, stage])
+  @@index([ownerId])
+  @@map("task_projects")
+}
+
+model TaskProjectMember {
+  projectId String            @map("project_id")
+  userId    String            @map("user_id")
+  role      ProjectMemberRole @default(MEMBER)
+  addedAt   DateTime          @default(now()) @map("added_at")
+
+  project TaskProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("task_project_members")
+}
+
+/**
+ * Tâche d'un projet. `parentId` porte l'arborescence (bouton OPEN du deck :
+ * ouvrir une tâche affiche ses tâches filles) et `path` le fil d'Ariane matérialisé
+ * (« Sub Task of : /Development/Design »).
+ */
+model Task {
+  id             String       @id @default(uuid())
+  projectId      String       @map("project_id")
+  parentId       String?      @map("parent_id")
+  title          String
+  description    String?      @db.Text
+  path           String       @default("/")
+  position       Int          @default(0)
+  priority       TaskPriority @default(NORMAL)
+  state          TaskState    @default(TODO)
+  ownerId        String?      @map("owner_id")
+  startDate      DateTime?    @map("start_date")
+  dueDate        DateTime?    @map("due_date")
+  plannedHours   Int?         @map("planned_hours")
+  progress       Int          @default(0)
+  archived       Boolean      @default(false)
+  /**
+   * Macro attachée à la propriété `event_dashboard` : affiche le bouton DASHBOARD.
+   */
+  eventDashboard String?      @map("event_dashboard")
+  /**
+   * Macro attachée à la propriété `event_configure` : affiche le bouton CONFIGURE.
+   */
+  eventConfigure String?      @map("event_configure")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  project  TaskProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   Task?       @relation("TaskTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children Task[]      @relation("TaskTree")
+  owner    User?       @relation("TaskOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+
+  events  TaskEvent[]
+  runLogs WorkflowRunLog[]
+
+  @@index([projectId, parentId, archived])
+  @@index([projectId, dueDate])
+  @@index([projectId, priority, state])
+  @@map("tasks")
+}
+
+/**
+ * Journal des actions et macros exécutées sur une tâche (EDIT, ARCHIVE, macros custom).
+ */
+model TaskEvent {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  actorId   String?  @map("actor_id")
+  action    String
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt(sort: Desc)])
+  @@map("task_events")
+}
+
+/**
+ * Modèle de document réutilisable (onglet « Documents templates »).
+ */
+model DocumentTemplate {
+  id           String           @id @default(uuid())
+  name         String
+  category     String           @default("general")
+  projectKind  TaskProjectKind? @map("project_kind")
+  description  String?          @db.Text
+  bodyMarkdown String           @default("") @db.Text
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  documents ProjectDocument[]
+
+  @@unique([name, category])
+  @@index([projectKind])
+  @@map("document_templates")
+}
+
+/**
+ * Document instancié depuis un modèle pour un projet donné.
+ */
+model ProjectDocument {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id")
+  templateId   String?  @map("template_id")
+  title        String
+  bodyMarkdown String   @default("") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  project  TaskProject       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  template DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@map("project_documents")
+}
+
+/**
+ * Définition de workflow éditée dans le concepteur.
+ */
+model Workflow {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?          @db.Text
+  projectKind TaskProjectKind? @map("project_kind")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  nodes       WorkflowNode[]
+  transitions WorkflowTransition[]
+  runs        WorkflowRun[]
+
+  @@map("workflows")
+}
+
+model WorkflowNode {
+  id         String           @id @default(uuid())
+  workflowId String           @map("workflow_id")
+  key        String
+  kind       WorkflowNodeKind @default(STEP)
+  label      String
+  x          Int              @default(0)
+  y          Int              @default(0)
+  /**
+   * Paramètres de la macro (ex. gabarit de sous-tâche pour un nœud SUBTASK).
+   */
+  macro      Json?
+
+  workflow Workflow             @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  outgoing WorkflowTransition[] @relation("TransitionFrom")
+  incoming WorkflowTransition[] @relation("TransitionTo")
+  runs     WorkflowRun[]
+  runLogs  WorkflowRunLog[]
+
+  @@unique([workflowId, key])
+  @@map("workflow_nodes")
+}
+
+model WorkflowTransition {
+  id         String @id @default(uuid())
+  workflowId String @map("workflow_id")
+  fromNodeId String @map("from_node_id")
+  toNodeId   String @map("to_node_id")
+  /**
+   * Étiquette de la branche (« GO », « NO GO »…) — requise sur un nœud DECISION.
+   */
+  label      String @default("")
+
+  workflow Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  from     WorkflowNode @relation("TransitionFrom", fields: [fromNodeId], references: [id], onDelete: Cascade)
+  to       WorkflowNode @relation("TransitionTo", fields: [toNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([fromNodeId, toNodeId, label])
+  @@index([workflowId])
+  @@map("workflow_transitions")
+}
+
+/**
+ * Exécution d'un workflow sur un projet (moteur de workflow).
+ */
+model WorkflowRun {
+  id            String            @id @default(uuid())
+  workflowId    String            @map("workflow_id")
+  projectId     String            @map("project_id")
+  currentNodeId String?           @map("current_node_id")
+  status        WorkflowRunStatus @default(RUNNING)
+  startedAt     DateTime          @default(now()) @map("started_at")
+  endedAt       DateTime?         @map("ended_at")
+
+  workflow    Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  project     TaskProject      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  currentNode WorkflowNode?    @relation(fields: [currentNodeId], references: [id], onDelete: SetNull)
+  logs        WorkflowRunLog[]
+
+  @@index([projectId, status])
+  @@map("workflow_runs")
+}
+
+model WorkflowRunLog {
+  id        String   @id @default(uuid())
+  runId     String   @map("run_id")
+  nodeId    String?  @map("node_id")
+  /**
+   * Branche empruntée quand le nœud quitté était un DECISION.
+   */
+  decision  String?
+  note      String?  @db.Text
+  /**
+   * Sous-tâche créée par un nœud SUBTASK.
+   */
+  taskId    String?  @map("task_id")
+  actorId   String?  @map("actor_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  run   WorkflowRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  node  WorkflowNode? @relation(fields: [nodeId], references: [id], onDelete: SetNull)
+  task  Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  actor User?         @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([runId, createdAt])
+  @@map("workflow_run_logs")
 }
