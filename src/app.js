@@ -458,7 +458,7 @@ async function render({ skipUserRefresh = false } = {}) {
       applySeoMeta({
         title: 'Une opportunité inédite pour se former | La Forge Hub',
         description:
-          'Cybersécurité, Intelligence Artificielle / Machine Learning, Passeport Numérique : répondez en 3 minutes et profitez d’un tarif de lancement.',
+          'Cybersécurité, Intelligence Artificielle / Machine Learning, Passeport Numérique : pédagogie et ressources issues du système japonais pour vous préparer à un emploi international.',
         noIndex: false,
       });
       document.title = 'Une opportunité inédite pour se former | La Forge Hub';
