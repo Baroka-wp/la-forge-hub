@@ -1,7 +1,7 @@
 {
   "name": "La Forge Hub — Apprendre l’IA",
   "short_name": "LA FORGE-HUB",
-  "description": "IA, mathématiques, Python et soft skills pour collégiens et lycéens.",
+  "description": "IA, mathématiques, Python et soft skills.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#EEF3F8",

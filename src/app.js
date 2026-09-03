@@ -768,7 +768,7 @@ async function renderHome() {
   const hero = `
     <section class="lms-home-hero">
       <div class="lms-home-hero-copy">
-        <p class="lms-kicker">Pour les collégiens et les lycéens</p>
+        <p class="lms-kicker">Plateforme d’apprentissage</p>
         <h1>Comprendre l’IA.<br><em>Construire avec.</em></h1>
         <p class="lms-home-lead">La Forge Hub transforme les notions complexes en un chemin clair : mathématiques, Python, machine learning, intelligence artificielle et compétences humaines.</p>
         <div class="lms-home-actions">
