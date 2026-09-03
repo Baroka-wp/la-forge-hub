@@ -427,7 +427,7 @@ export function renderSurveyPageHtml() {
         <div class="survey-hero" id="surveyHero">
           <span class="survey-badge">Partenariat Bénin × Japon</span>
           <h1 class="survey-title">Formez-vous en <span class="survey-kw">Intelligence Artificielle</span>, <span class="survey-kw">Cybersécurité</span> ou décrochez votre <span class="survey-kw">Passeport Numérique</span></h1>
-          <p class="survey-sub">Pédagogie d'ingénierie japonaise, dans la continuité de la stratégie nationale IA du Bénin. Tarif de lancement réservé aux premiers répondants.</p>
+          <p class="survey-sub">Pédagogie et ressources issues du système japonais pour vous préparer à un emploi international.</p>
           <button type="button" class="btn btn-primary btn-lg" id="surveyStartBtn">Je réponds maintenant</button>
           <p class="survey-microtext">3 minutes seulement, sans engagement</p>
         </div>
