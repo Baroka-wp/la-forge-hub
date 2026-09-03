@@ -406,26 +406,17 @@ function buildPayload(a) {
   };
 }
 
-/**
- * Bandeau décoratif : losanges inspirés des tentures appliquées d'Abomey,
- * réduits à un trait fin sur ivoire — registre clair et sobre.
- */
+/** Bannière : remise d'attestation, promotion Dive into Code au Bénin. */
 const BENIN_MOTIF_BANNER = `
-    <div class="survey-banner" aria-hidden="true">
-      <svg width="100%" height="96" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="motifBenin" patternUnits="userSpaceOnUse" width="110" height="96">
-            <path d="M55 26 L77 48 L55 70 L33 48 Z" fill="none" stroke="#c2a15c" stroke-width="1.1"/>
-            <path d="M55 41 L62 48 L55 55 L48 48 Z" fill="#18a16c" opacity="0.45"/>
-            <circle cx="0" cy="48" r="1.9" fill="#c2a15c" opacity="0.6"/>
-            <circle cx="110" cy="48" r="1.9" fill="#c2a15c" opacity="0.6"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="96" fill="#faf7f1"/>
-        <rect width="100%" height="96" fill="url(#motifBenin)"/>
-        <rect x="0" y="14" width="100%" height="1" fill="#c2a15c" opacity="0.26"/>
-        <rect x="0" y="81" width="100%" height="1" fill="#c2a15c" opacity="0.26"/>
-      </svg>
+    <div class="survey-banner">
+      <img
+        src="/opportunite-banner.jpg"
+        alt="Remise d'attestation à un participant de la formation Dive into Code au Bénin"
+        width="1322"
+        height="1052"
+        loading="eager"
+        decoding="async"
+      />
     </div>`;
 
 export function renderSurveyPageHtml() {
