@@ -875,3 +875,27 @@ model WorkflowRunLog {
   @@index([runId, createdAt])
   @@map("workflow_run_logs")
 }
+
+/** Réponses au questionnaire de mesure de la demande (partenariat Bénin x Japon). */
+model SurveyResponse {
+  id                  String   @id @default(uuid())
+  offrePrincipale     String   @map("offre_principale")
+  offresInteressantes Json     @map("offres_interessantes")
+  profil              Json
+  motivation          Json
+  motivationAutre     String?  @map("motivation_autre")
+  formatApprentissage String   @map("format_apprentissage")
+  villePresentiel     String?  @map("ville_presentiel")
+  disponibilite       Json
+  budget              String
+  contactNom          String   @map("contact_nom")
+  contactWhatsapp     String   @map("contact_whatsapp")
+  contactEmail        String?  @map("contact_email")
+  consentement        Boolean  @default(false)
+  ipHash              String?  @map("ip_hash")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@index([offrePrincipale])
+  @@index([createdAt])
+  @@map("survey_responses")
+}

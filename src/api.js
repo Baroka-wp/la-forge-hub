@@ -165,6 +165,7 @@ export async function getSession() {
             displayName: data.user.displayName,
             role: data.user.role,
             isAdmin: !!data.isAdmin,
+            enrollments: data.enrollments || [],
           }
         : null,
     };
@@ -265,9 +266,10 @@ async function fetchMeNeon() {
   return r.json();
 }
 
-export async function isEnrolled(userId, courseSlug = COURSE.slug) {
+export async function isEnrolled(userId, courseSlug = COURSE.slug, knownEnrollments = null) {
   if (!userId) return false;
   if (neonMode()) {
+    if (Array.isArray(knownEnrollments)) return knownEnrollments.includes(courseSlug);
     const me = await fetchMeNeon();
     return !!(me?.enrollments && me.enrollments.includes(courseSlug));
   }

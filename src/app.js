@@ -62,6 +62,7 @@ import { pushLoading, popLoading, withLoading } from './loader.js';
 import { renderCguPageHtml } from './legal-cgu.js';
 import { renderAttestationsPageHtml, bindAttestationsPage } from './attestations.js';
 import { matchEmonosSection, renderEmonosPageHtml, bindEmonosPage } from './emonos/index.js';
+import { renderSurveyPageHtml, bindSurveyPage } from './survey.js';
 import { applySeoMeta, DEFAULT_SITE_DESCRIPTION, truncateMetaDescription } from './seo.js';
 
 /** Rempli au démarrage par `loadCatalogSessions()` (base Neon ou fallback fichier) */
@@ -95,6 +96,7 @@ function matchRoute() {
     const section = matchEmonosSection(path);
     if (section) return { name: 'emonos', section };
   }
+  if (parts[0] === 'opportunite') return { name: 'opportunite' };
   if (parts[0] === 'webinars') {
     if (parts.length === 1) return { name: 'webinars' };
     if (parts.length === 2) return { name: 'webinar-detail', id: parts[1] };
@@ -371,17 +373,16 @@ export async function initApp() {
   bindRouter();
   bindMobileNavOnce();
   await withLoading(async () => {
-    await reloadCatalog();
-    await refreshUser();
-    await render();
+    await Promise.all([reloadCatalog(), refreshUser()]);
+    await render({ skipUserRefresh: true });
   });
 }
 
-async function render() {
+async function render({ skipUserRefresh = false } = {}) {
   pushLoading();
   try {
     document.body.classList.remove('nav-drawer-open');
-    await refreshUser();
+    if (!skipUserRefresh) await refreshUser();
     const route = matchRoute();
     const app = document.getElementById('app');
     if (!app) return;
@@ -447,6 +448,17 @@ async function render() {
         noIndex: true,
       });
       await bindEmonosPage(route.section, { navigate });
+    } else if (route.name === 'opportunite') {
+      applySeoMeta({
+        title: 'Une opportunité inédite pour se former | La Forge Hub',
+        description:
+          'Cybersécurité, Intelligence Artificielle / Machine Learning, Passeport Numérique : répondez en 3 minutes et profitez d’un tarif de lancement.',
+        noIndex: false,
+      });
+      document.title = 'Une opportunité inédite pour se former | La Forge Hub';
+      app.innerHTML = renderSurveyPageHtml();
+      bindSurveyPage();
+      return;
     } else if (route.name === 'course' && route.slug === COURSE.slug) {
       app.innerHTML = shell(await renderCourse(), {
         title: `${COURSE.title} — Parcours`,
@@ -1038,7 +1050,7 @@ function bindAuthForm(mode) {
 }
 
 async function renderCourse() {
-  const enrolled = currentUser ? await isEnrolled(currentUser.id) : false;
+  const enrolled = currentUser ? await isEnrolled(currentUser.id, COURSE.slug, currentUser.enrollments) : false;
   const progress = currentUser ? await getProgressMap(currentUser.id) : {};
   const lastIncomplete = sessions.find((s) => !progress[s.lessonId]?.completed);
   const firstLessonId = sessions[0]?.lessonId;
@@ -1145,11 +1157,13 @@ function bindCourseActions() {
 }
 
 async function renderDashboard() {
-  const progress = await getProgressMap(currentUser.id);
+  const [progress, webinarBanner] = await Promise.all([
+    getProgressMap(currentUser.id),
+    getDashboardWebinarBannerHtml(),
+  ]);
   const done = Object.values(progress).filter((p) => p.completed).length;
   const pct = sessions.length ? Math.round((done / sessions.length) * 100) : 0;
   const lastIncomplete = sessions.find((s) => !progress[s.lessonId]?.completed);
-  const webinarBanner = await getDashboardWebinarBannerHtml();
   const dashboardTracks = [
     { key: 'python', label: 'Python' },
     { key: 'math', label: 'Mathématiques' },
@@ -1241,7 +1255,7 @@ async function renderLearn(lessonId) {
       </section>`;
   }
 
-  const enrolled = await isEnrolled(currentUser.id);
+  const enrolled = await isEnrolled(currentUser.id, COURSE.slug, currentUser.enrollments);
   if (!enrolled) {
     return `
       <section class="panel surface-card">
@@ -1316,7 +1330,7 @@ async function renderLearn(lessonId) {
 async function bindLearnPage(lessonId) {
   const lesson = findLesson(lessonId);
   if (!lesson || !currentUser) return;
-  const enrolled = await isEnrolled(currentUser.id);
+  const enrolled = await isEnrolled(currentUser.id, COURSE.slug, currentUser.enrollments);
   if (!enrolled) return;
 
   const chk = document.getElementById('chkComplete');
