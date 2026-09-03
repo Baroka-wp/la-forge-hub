@@ -3,6 +3,18 @@ import { pushLoading, popLoading } from './loader.js';
 
 const JWT_KEY = 'lms_jwt';
 
+/**
+ * Court cache mémoire pour /api/me : évite de refaire l'appel à chaque navigation
+ * (chaque render() y compris via popstate). Invalidé sur toute action qui change
+ * l'utilisateur ou ses inscriptions (connexion, déconnexion, profil, inscription).
+ */
+const SESSION_CACHE_TTL_MS = 15000;
+let sessionCache = null;
+
+function invalidateSessionCache() {
+  sessionCache = null;
+}
+
 function apiBase() {
   return import.meta.env.VITE_API_BASE_URL || '';
 }
@@ -147,9 +159,13 @@ export async function getSession() {
   if (neonMode()) {
     const token = localStorage.getItem(JWT_KEY);
     if (!token) return { user: null };
+    if (sessionCache && sessionCache.token === token && Date.now() - sessionCache.ts < SESSION_CACHE_TTL_MS) {
+      return sessionCache.result;
+    }
     const r = await apiFetch('/api/me', { method: 'GET' });
     if (r.status === 401) {
       localStorage.removeItem(JWT_KEY);
+      invalidateSessionCache();
       return { user: null };
     }
     if (!r.ok) {
@@ -157,7 +173,7 @@ export async function getSession() {
       return { user: null, error: err.error || r.statusText };
     }
     const data = await r.json();
-    return {
+    const result = {
       user: data.user
         ? {
             id: data.user.id,
@@ -169,6 +185,8 @@ export async function getSession() {
           }
         : null,
     };
+    sessionCache = { token, ts: Date.now(), result };
+    return result;
   }
   const lu = readLocalUser();
   if (!lu) return { user: null };
@@ -286,6 +304,7 @@ export async function enroll(userId, courseSlug = COURSE.slug, marketingOptIn = 
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, error: data.error || 'Erreur' };
+    invalidateSessionCache();
     return { ok: true };
   }
   const m = readEnrolled(userId);
@@ -762,6 +781,14 @@ export async function fetchAdminWebinarRegistrations(webinarId) {
 /**
  * @param {{ page?: number, pageSize?: number, q?: string, marketingOptIn?: boolean|string }} [params]
  */
+export async function fetchAdminSurveyResponses() {
+  if (!neonMode()) return { ok: false, total: 0, byOffer: [], responses: [] };
+  const r = await apiFetch('/api/admin/survey', { method: 'GET' });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, total: 0, byOffer: [], responses: [], error: data.error };
+  return { ok: true, total: data.total || 0, byOffer: data.byOffer || [], responses: data.responses || [] };
+}
+
 export async function fetchAdminCrmContacts(params = {}) {
   if (!neonMode()) {
     return {
@@ -853,6 +880,7 @@ export async function updateProfileDisplayName(userId, displayName) {
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, error: data.error };
+    invalidateSessionCache();
     return { ok: true };
   }
   const lu = readLocalUser();

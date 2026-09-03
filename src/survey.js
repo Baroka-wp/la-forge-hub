@@ -406,14 +406,23 @@ function buildPayload(a) {
   };
 }
 
+const HERO_ICON_AI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="16" r="2.2"/><circle cx="19" cy="16" r="2.2"/><path d="M12 7.2v3M10.3 9.6 6.7 14M13.7 9.6l3.6 4.4"/></svg>`;
+const HERO_ICON_SHIELD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.3 2.9 7.6 7 8.5 4.1-.9 7-4.2 7-8.5V6l-7-2.5Z"/><path d="m9 12 2 2 4-4.2"/></svg>`;
+const HERO_ICON_CODE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg>`;
+
 export function renderSurveyPageHtml() {
   return `
     <div class="survey-page">
       <div class="survey-sheet">
         <div class="survey-hero" id="surveyHero">
+          <div class="survey-hero-visual" aria-hidden="true">
+            <span class="survey-hero-icon survey-hero-icon--a">${HERO_ICON_AI}</span>
+            <span class="survey-hero-icon survey-hero-icon--b">${HERO_ICON_SHIELD}</span>
+            <span class="survey-hero-icon survey-hero-icon--c">${HERO_ICON_CODE}</span>
+          </div>
           <span class="survey-badge">Partenariat Bénin × Japon</span>
-          <h1 class="survey-title">Une opportunité inédite pour se former en Intelligence Artificielle, en Cybersécurité, ou décrocher votre Passeport Numérique</h1>
-          <p class="survey-sub">Un parcours conçu selon la pédagogie d'ingénierie japonaise, dans la continuité de la stratégie nationale IA du Bénin. Répondez en 3 minutes pour être parmi les premiers informés et profiter d'un tarif de lancement réservé aux premiers répondants.</p>
+          <h1 class="survey-title">Formez-vous en <span class="survey-kw">Intelligence Artificielle</span>, <span class="survey-kw">Cybersécurité</span> ou décrochez votre <span class="survey-kw">Passeport Numérique</span></h1>
+          <p class="survey-sub">Pédagogie d'ingénierie japonaise, dans la continuité de la stratégie nationale IA du Bénin. Tarif de lancement réservé aux premiers répondants.</p>
           <button type="button" class="btn btn-primary btn-lg" id="surveyStartBtn">Je réponds maintenant</button>
           <p class="survey-microtext">3 minutes seulement, sans engagement</p>
         </div>
