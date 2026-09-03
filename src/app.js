@@ -276,7 +276,10 @@ function shell(content, opts = {}) {
       </div>
     </div>
     <main id="main-content" class="site-main ${adminPage ? 'site-main--admin' : ''} ${landingPage ? 'site-main--landing' : ''}">${content}</main>
-    <footer class="site-footer">
+    ${
+      adminPage
+        ? ''
+        : `<footer class="site-footer">
       <div class="site-footer-cols">
         <div class="site-footer-col">
           <p class="site-footer-brand"><strong>${escapeHtml(PLATFORM_BRAND)}</strong></p>
@@ -296,7 +299,8 @@ function shell(content, opts = {}) {
           <a data-router href="/cgu">Conditions générales d’utilisation</a>
         </div>
       </div>
-    </footer>
+    </footer>`
+    }
   `;
 }
 

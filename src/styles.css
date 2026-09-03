@@ -2312,6 +2312,7 @@ body:has(.home-landing) .site-footer {
 
 /* Flex : la colonne contenu peut être très haute sans étirer la sidebar sur toute cette hauteur */
 .admin-dashboard {
+  --admin-sidebar-w: clamp(200px, 24vw, 268px);
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -2319,11 +2320,18 @@ body:has(.home-landing) .site-footer {
   min-width: 0;
 }
 
+/**
+ * `fixed` et non `sticky` : `body { overflow-x: clip }` force `overflow-y: auto`
+ * sur le body, ce qui casse le collage d'un `sticky` descendant (il défilait
+ * avec le contenu).
+ */
 .admin-sidebar {
-  position: sticky;
+  position: fixed;
   top: var(--header-height);
-  flex: 0 0 clamp(200px, 24vw, 268px);
-  width: clamp(200px, 24vw, 268px);
+  left: 0;
+  z-index: 20;
+  flex: none;
+  width: var(--admin-sidebar-w);
   max-width: 268px;
   display: flex;
   flex-direction: column;
@@ -2450,6 +2458,7 @@ body:has(.home-landing) .site-footer {
 .admin-content {
   flex: 1;
   min-width: 0;
+  margin-left: var(--admin-sidebar-w);
   min-height: calc(100vh - var(--header-height));
   padding: 32px clamp(20px, 4vw, 40px) 48px;
   background: var(--surface);
@@ -3141,6 +3150,8 @@ body:has(.home-landing) .site-footer {
   .admin-sidebar {
     position: relative;
     top: auto;
+    left: auto;
+    z-index: auto;
     flex: none;
     width: 100%;
     max-width: none;
@@ -3189,6 +3200,8 @@ body:has(.home-landing) .site-footer {
   }
 
   .admin-content {
+    margin-left: 0;
+    min-height: 0;
     padding: 24px 18px 40px;
   }
 
@@ -6039,6 +6052,7 @@ body.no-scroll {
   background: linear-gradient(180deg, var(--secondary-container) 0%, var(--surface) 55%, var(--secondary-container) 100%);
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 .survey-sheet {
@@ -6047,6 +6061,23 @@ body.no-scroll {
   background: var(--surface-container-lowest);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-ambient);
+  overflow: hidden;
+}
+
+.survey-banner {
+  line-height: 0;
+  background: #12312f;
+}
+
+.survey-banner svg {
+  display: block;
+  width: 100%;
+  height: 120px;
+}
+
+.survey-hero,
+.survey-wizard,
+.survey-done {
   padding: clamp(1.5rem, 1.2rem + 2vw, 2.75rem) clamp(1.25rem, 1rem + 2vw, 2.25rem);
 }
 
@@ -6056,51 +6087,6 @@ body.no-scroll {
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-}
-
-.survey-hero-visual {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 0.25rem;
-}
-
-.survey-hero-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
-}
-
-.survey-hero-icon svg {
-  width: 1.6rem;
-  height: 1.6rem;
-}
-
-.survey-hero-icon--a,
-.survey-hero-icon--c {
-  background: var(--secondary-container);
-  color: var(--primary);
-}
-
-.survey-hero-icon--b {
-  width: 3.75rem;
-  height: 3.75rem;
-  margin-bottom: 0.35rem;
-  background: var(--gradient-tertiary);
-  color: var(--on-tertiary);
-}
-
-.survey-hero-icon--a {
-  transform: rotate(-6deg);
-}
-
-.survey-hero-icon--c {
-  transform: rotate(6deg);
 }
 
 .survey-badge {
@@ -6125,11 +6111,6 @@ body.no-scroll {
 
 .survey-kw {
   color: var(--primary);
-  background: var(--secondary-container);
-  padding: 0.02em 0.35em;
-  border-radius: 0.3em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
 }
 
 .survey-sub {

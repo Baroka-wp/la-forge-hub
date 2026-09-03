@@ -406,20 +406,34 @@ function buildPayload(a) {
   };
 }
 
-const HERO_ICON_AI = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="16" r="2.2"/><circle cx="19" cy="16" r="2.2"/><path d="M12 7.2v3M10.3 9.6 6.7 14M13.7 9.6l3.6 4.4"/></svg>`;
-const HERO_ICON_SHIELD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 5 6v5.5c0 4.3 2.9 7.6 7 8.5 4.1-.9 7-4.2 7-8.5V6l-7-2.5Z"/><path d="m9 12 2 2 4-4.2"/></svg>`;
-const HERO_ICON_CODE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4M15 8l4 4-4 4"/></svg>`;
+/**
+ * Bandeau décoratif : motifs géométriques inspirés des tentures appliquées
+ * d'Abomey (losanges, chevrons), aux couleurs du drapeau béninois.
+ */
+const BENIN_MOTIF_BANNER = `
+    <div class="survey-banner" aria-hidden="true">
+      <svg width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="motifBenin" patternUnits="userSpaceOnUse" width="72" height="120">
+            <path d="M0 18 L18 4 L36 18 L54 4 L72 18" fill="none" stroke="#fcd116" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M36 34 L58 60 L36 86 L14 60 Z" fill="#008751"/>
+            <path d="M36 46 L48 60 L36 74 L24 60 Z" fill="#fcd116"/>
+            <rect x="2" y="54" width="9" height="12" fill="#e8112d"/>
+            <rect x="61" y="54" width="9" height="12" fill="#e8112d"/>
+            <path d="M0 102 L18 116 L36 102 L54 116 L72 102" fill="none" stroke="#fcd116" stroke-width="3" stroke-linejoin="round"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="120" fill="#12312f"/>
+        <rect width="100%" height="120" fill="url(#motifBenin)"/>
+      </svg>
+    </div>`;
 
 export function renderSurveyPageHtml() {
   return `
     <div class="survey-page">
       <div class="survey-sheet">
+        ${BENIN_MOTIF_BANNER}
         <div class="survey-hero" id="surveyHero">
-          <div class="survey-hero-visual" aria-hidden="true">
-            <span class="survey-hero-icon survey-hero-icon--a">${HERO_ICON_AI}</span>
-            <span class="survey-hero-icon survey-hero-icon--b">${HERO_ICON_SHIELD}</span>
-            <span class="survey-hero-icon survey-hero-icon--c">${HERO_ICON_CODE}</span>
-          </div>
           <span class="survey-badge">Partenariat Bénin × Japon</span>
           <h1 class="survey-title">Formez-vous en <span class="survey-kw">Intelligence Artificielle</span>, <span class="survey-kw">Cybersécurité</span> ou décrochez votre <span class="survey-kw">Passeport Numérique</span></h1>
           <p class="survey-sub">Pédagogie d'ingénierie japonaise, dans la continuité de la stratégie nationale IA du Bénin. Tarif de lancement réservé aux premiers répondants.</p>
