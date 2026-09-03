@@ -407,24 +407,24 @@ function buildPayload(a) {
 }
 
 /**
- * Bandeau décoratif : motifs géométriques inspirés des tentures appliquées
- * d'Abomey (losanges, chevrons), aux couleurs du drapeau béninois.
+ * Bandeau décoratif : losanges inspirés des tentures appliquées d'Abomey,
+ * réduits à un trait fin sur ivoire — registre clair et sobre.
  */
 const BENIN_MOTIF_BANNER = `
     <div class="survey-banner" aria-hidden="true">
-      <svg width="100%" height="120" xmlns="http://www.w3.org/2000/svg">
+      <svg width="100%" height="96" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <pattern id="motifBenin" patternUnits="userSpaceOnUse" width="72" height="120">
-            <path d="M0 18 L18 4 L36 18 L54 4 L72 18" fill="none" stroke="#fcd116" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M36 34 L58 60 L36 86 L14 60 Z" fill="#008751"/>
-            <path d="M36 46 L48 60 L36 74 L24 60 Z" fill="#fcd116"/>
-            <rect x="2" y="54" width="9" height="12" fill="#e8112d"/>
-            <rect x="61" y="54" width="9" height="12" fill="#e8112d"/>
-            <path d="M0 102 L18 116 L36 102 L54 116 L72 102" fill="none" stroke="#fcd116" stroke-width="3" stroke-linejoin="round"/>
+          <pattern id="motifBenin" patternUnits="userSpaceOnUse" width="110" height="96">
+            <path d="M55 26 L77 48 L55 70 L33 48 Z" fill="none" stroke="#c2a15c" stroke-width="1.1"/>
+            <path d="M55 41 L62 48 L55 55 L48 48 Z" fill="#18a16c" opacity="0.45"/>
+            <circle cx="0" cy="48" r="1.9" fill="#c2a15c" opacity="0.6"/>
+            <circle cx="110" cy="48" r="1.9" fill="#c2a15c" opacity="0.6"/>
           </pattern>
         </defs>
-        <rect width="100%" height="120" fill="#12312f"/>
-        <rect width="100%" height="120" fill="url(#motifBenin)"/>
+        <rect width="100%" height="96" fill="#faf7f1"/>
+        <rect width="100%" height="96" fill="url(#motifBenin)"/>
+        <rect x="0" y="14" width="100%" height="1" fill="#c2a15c" opacity="0.26"/>
+        <rect x="0" y="81" width="100%" height="1" fill="#c2a15c" opacity="0.26"/>
       </svg>
     </div>`;
 
