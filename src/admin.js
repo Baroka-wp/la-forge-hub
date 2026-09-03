@@ -11,6 +11,7 @@ import {
   fetchAdminCrmContacts,
   adminCreateCrmContact,
   adminCrmSendBulkEmail,
+  fetchAdminSurveyResponses,
 } from './api.js';
 import { COURSE, PLATFORM_BRAND } from './seed-data.js';
 
@@ -39,6 +40,26 @@ function userFullName(u) {
 
 const ADMIN_LESSONS_PAGE_SIZE = 12;
 
+const ADMIN_NAV_ICONS = {
+  overview: '<path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/>',
+  lessons: '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z"/><path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20"/>',
+  webinars: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="m21 8-5 4 5 4V8Z"/>',
+  attestations: '<circle cx="12" cy="8" r="5"/><path d="M8.5 12.5 7 21l5-2.5 5 2.5-1.5-8.5"/>',
+  users: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.7-5 5.5-5s4.9 2 5.5 5"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15.8 14.3c2.2.4 3.7 2.1 4.2 4.7"/>',
+  crm: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/>',
+  survey: '<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/>',
+};
+
+const ADMIN_NAV_ITEMS = [
+  { key: 'overview', href: '/admin', label: 'Vue d’ensemble' },
+  { key: 'lessons', href: '/admin/lessons', label: 'Leçons' },
+  { key: 'webinars', href: '/admin/webinars', label: 'Ateliers &amp; replays' },
+  { key: 'attestations', href: '/admin/attestations', label: 'Attestations' },
+  { key: 'users', href: '/admin/users', label: 'Apprenants' },
+  { key: 'crm', href: '/admin/crm', label: 'Contacts (CRM)' },
+  { key: 'survey', href: '/admin/survey', label: 'Enquête opportunité' },
+];
+
 function adminNav(active, user) {
   const initial = esc(userInitialLetter(user));
   const name = esc(userFullName(user));
@@ -49,6 +70,13 @@ function adminNav(active, user) {
       <p class="admin-user-name">${name}</p>
     </div>`
       : '';
+  const links = ADMIN_NAV_ITEMS.map(
+    (item) => `
+        <a data-router href="${item.href}" class="admin-nav-link ${active === item.key ? 'is-active' : ''}">
+          <svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ADMIN_NAV_ICONS[item.key]}</svg>
+          <span>${item.label}</span>
+        </a>`,
+  ).join('');
   return `
   <aside class="admin-sidebar surface-container-low">
     <div class="admin-sidebar-main">
@@ -56,13 +84,7 @@ function adminNav(active, user) {
         <span class="admin-sidebar-kicker">${esc(PLATFORM_BRAND)}</span>
         <p class="admin-sidebar-title">Administration</p>
       </div>
-      <nav class="admin-nav" aria-label="Navigation administration">
-        <a data-router href="/admin" class="admin-nav-link ${active === 'overview' ? 'is-active' : ''}">Vue d’ensemble</a>
-        <a data-router href="/admin/lessons" class="admin-nav-link ${active === 'lessons' ? 'is-active' : ''}">Leçons</a>
-        <a data-router href="/admin/webinars" class="admin-nav-link ${active === 'webinars' ? 'is-active' : ''}">Ateliers &amp; replays</a>
-        <a data-router href="/admin/attestations" class="admin-nav-link ${active === 'attestations' ? 'is-active' : ''}">Attestations</a>
-        <a data-router href="/admin/users" class="admin-nav-link ${active === 'users' ? 'is-active' : ''}">Apprenants</a>
-        <a data-router href="/admin/crm" class="admin-nav-link ${active === 'crm' ? 'is-active' : ''}">Contacts (CRM)</a>
+      <nav class="admin-nav" aria-label="Navigation administration">${links}
       </nav>
       <a data-router href="/" class="admin-back-link">← Retour au site</a>
     </div>
@@ -74,7 +96,13 @@ export function wrapAdminPage(active, innerHtml, user) {
   return `
   <div class="admin-dashboard">
     ${adminNav(active, user)}
-    <div class="admin-content">${innerHtml}</div>
+    <div class="admin-content">
+      ${innerHtml}
+      <footer class="admin-footer">
+        <span>${esc(PLATFORM_BRAND)} — Administration</span>
+        <a data-router href="/">Retour au site</a>
+      </footer>
+    </div>
   </div>`;
 }
 
@@ -622,6 +650,91 @@ export async function renderAdminCrmHtml(user) {
     </div>`;
 
   return wrapAdminPage('crm', inner, user);
+}
+
+function fmtList(arr) {
+  return Array.isArray(arr) && arr.length ? arr.map((v) => esc(v)).join(', ') : '—';
+}
+
+export async function renderAdminSurveyHtml(user) {
+  const neon = backendMode() === 'neon';
+  const data = neon
+    ? await fetchAdminSurveyResponses()
+    : { ok: false, total: 0, byOffer: [], responses: [] };
+  const responses = data.ok ? data.responses : [];
+
+  const kpiRow = neon
+    ? `<section class="admin-kpi-row">
+      <article class="admin-stat-card surface-container-lowest">
+        <span class="admin-stat-num">${data.total}</span>
+        <span class="admin-stat-label">Réponses reçues</span>
+      </article>
+      ${data.byOffer
+        .map(
+          (o) => `<article class="admin-stat-card surface-container-lowest">
+        <span class="admin-stat-num">${o.count}</span>
+        <span class="admin-stat-label">${esc(o.label)}</span>
+      </article>`,
+        )
+        .join('')}
+    </section>`
+    : '';
+
+  const rows = responses
+    .map((r) => {
+      const p = r.profil || {};
+      const d = r.disponibilite || {};
+      return `
+      <tr>
+        <td class="muted"><time datetime="${esc(r.createdAt)}">${new Date(r.createdAt).toLocaleString('fr-FR')}</time></td>
+        <td>${esc(r.contactNom)}</td>
+        <td><code class="admin-code">${esc(r.contactWhatsapp)}</code></td>
+        <td class="muted">${esc(r.contactEmail || '—')}</td>
+        <td>${esc(r.offrePrincipaleLabel)}${r.offresInteressantes?.length > 1 ? ` <span class="muted">(+${r.offresInteressantes.length - 1})</span>` : ''}</td>
+        <td class="muted">${esc(r.budget)}</td>
+        <td class="muted">${esc(p.statut || '—')}</td>
+        <td class="muted">${esc(p.ville || '—')}</td>
+        <td class="muted">${esc(r.formatApprentissage)}</td>
+        <td class="muted">${fmtList(r.motivation)}</td>
+        <td class="muted">${esc(d.heuresSemaine || '—')} · ${esc(d.rythme || '—')}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const inner = `
+    <div class="admin-crm-page">
+    <header class="admin-page-head admin-crm-page-head">
+      <div class="admin-page-head-row">
+        <div>
+          <h1 class="h1">Enquête opportunité</h1>
+          <p class="muted body-lg">Réponses au questionnaire /opportunite (IA/ML, Cybersécurité, Passeport Numérique).</p>
+        </div>
+      </div>
+    </header>
+    ${kpiRow}
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Reçu le</th>
+            <th>Nom</th>
+            <th>WhatsApp</th>
+            <th>E-mail</th>
+            <th>Offre principale</th>
+            <th>Budget</th>
+            <th>Statut</th>
+            <th>Ville</th>
+            <th>Format</th>
+            <th>Motivation</th>
+            <th>Disponibilité</th>
+          </tr>
+        </thead>
+        <tbody>${rows || `<tr><td colspan="11" class="muted">Aucune réponse pour l’instant.</td></tr>`}</tbody>
+      </table>
+    </div>
+    </div>`;
+
+  return wrapAdminPage('survey', inner, user);
 }
 
 export function bindAdminCrmPage() {

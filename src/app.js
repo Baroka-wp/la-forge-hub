@@ -37,6 +37,7 @@ import {
   renderAdminUsersHtml,
   renderAdminUserDetailHtml,
   renderAdminCrmHtml,
+  renderAdminSurveyHtml,
   bindAdminLessonsPage,
   bindAdminUsersPage,
   bindAdminUserDetailPage,
@@ -109,6 +110,7 @@ function matchRoute() {
       if (parts.length === 3) return { name: 'admin-user-detail', id: parts[2] };
     }
     if (parts[1] === 'crm') return { name: 'admin-crm' };
+    if (parts[1] === 'survey') return { name: 'admin-survey' };
     if (parts[1] === 'attestations') return { name: 'admin-attestations' };
     if (parts[1] === 'webinars') {
       if (parts.length === 2) return { name: 'admin-webinars' };
@@ -540,6 +542,7 @@ async function render({ skipUserRefresh = false } = {}) {
     route.name === 'admin-users' ||
     route.name === 'admin-user-detail' ||
     route.name === 'admin-crm' ||
+    route.name === 'admin-survey' ||
     route.name === 'admin-attestations' ||
     route.name === 'admin-webinars' ||
     route.name === 'admin-webinar-detail'
@@ -584,6 +587,8 @@ async function render({ skipUserRefresh = false } = {}) {
     } else if (route.name === 'admin-crm') {
       app.innerHTML = shell(await renderAdminCrmHtml(currentUser), { title: `Admin — CRM — ${PLATFORM_BRAND}`, admin: true });
       bindAdminCrmPage();
+    } else if (route.name === 'admin-survey') {
+      app.innerHTML = shell(await renderAdminSurveyHtml(currentUser), { title: `Admin — Enquête opportunité — ${PLATFORM_BRAND}`, admin: true });
     } else if (route.name === 'admin-attestations') {
       app.innerHTML = shell(await renderAdminAttestationsHtml(currentUser), {
         title: `Admin — Attestations — ${PLATFORM_BRAND}`,
