@@ -29,6 +29,7 @@ import { listWebinars, getNextWebinar, getWebinarById } from '../api/webinars-pu
 import { registerToWebinar } from '../api/webinars-register.js';
 import { replayOptin } from '../api/webinars-replay-optin.js';
 import { newsletterOptin } from '../api/newsletter-optin.js';
+import submitSurvey from '../api/survey.js';
 import { trackReplayView } from '../api/webinars-replay-view.js';
 import {
   adminListWebinars,
@@ -170,6 +171,7 @@ export function registerApiRoutes(app) {
   app.post('/api/webinars/:id/replay-view', (req, res) => trackReplayView(req, res));
   app.post('/api/webinars/replay-optin', (req, res) => replayOptin(req, res));
   app.post('/api/newsletter/optin', (req, res) => newsletterOptin(req, res));
+  app.post('/api/survey', (req, res) => submitSurvey(req, res));
 
   /** Attestations NOAI / Bootcamp IOAI (page publique non listée /attestations). */
   app.post('/api/attestations/lookup', (req, res) => lookupCertificates(req, res));
